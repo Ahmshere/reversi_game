@@ -95,7 +95,7 @@ class _TutorialScreenState extends State<TutorialScreen>
       ),
     ),
 
-    // 2. Доступные ходы мигают
+    // 2. Допустимые ходы — правильные позиции
     _TutStep(
       title: (l) => l.tutStep2Title,
       desc: (l) => l.tutStep2Desc,
@@ -106,12 +106,16 @@ class _TutorialScreenState extends State<TutorialScreen>
           (2, 1): Player.black,
           (2, 2): Player.white,
         },
-        hints: const [(0, 2), (1, 0), (2, 3), (3, 1)],
-        hintOpacity: 0.35 + 0.55 * a,
+        // (1,0): чёрная зажимает (1,1)белую → (1,2)чёрная
+        // (0,1): чёрная зажимает (1,1)белую → (2,1)чёрная
+        // (2,3): чёрная зажимает (2,2)белую → (2,1)чёрная
+        // (3,2): чёрная зажимает (2,2)белую → (1,2)чёрная
+        hints: const [(1, 0), (0, 1), (2, 3), (3, 2)],
+        hintOpacity: 0.8 + 0.2 * a,
       ),
     ),
 
-    // 3. Ход — стрелка показывает куда
+    // 3. Ход — красная стрелка, ставим на (1,0) зажимая (1,1)белую
     _TutStep(
       title: (l) => l.tutStep3Title,
       desc: (l) => l.tutStep3Desc,
@@ -122,50 +126,50 @@ class _TutorialScreenState extends State<TutorialScreen>
           (2, 1): Player.black,
           (2, 2): Player.white,
         },
-        hints: const [(0, 2)],
-        hintOpacity: 0.5 + 0.4 * a,
+        hints: const [(1, 0)],
+        hintOpacity: 0.8 + 0.2 * a,
         arrows: const [
           _Arrow(
-              fromRow: 2,
-              fromCol: 3,
-              toRow: 0,
-              toCol: 2,
-              color: Color(0xFF2ECC71)),
+              fromRow: 1,
+              fromCol: 2,
+              toRow: 1,
+              toCol: 0,
+              color: Color(0xFFE74C3C)),
         ],
       ),
     ),
 
-    // 4. Фишка поставлена, переворот анимирован
+    // 4. Фишка поставлена на (1,0), переворачивается (1,1)
     _TutStep(
       title: (l) => l.tutStep4Title,
       desc: (l) => l.tutStep4Desc,
       boardBuilder: (a) => _board4(
         pieces: const {
-          (1, 1): Player.white,
+          (1, 2): Player.black,
           (2, 1): Player.black,
           (2, 2): Player.white,
         },
-        newPiece: (0, 2, Player.black),
-        flipPieces: const [(1, 2)],
+        newPiece: (1, 0, Player.black),
+        flipPieces: const [(1, 1)],
         flipProgress: a,
         flipFromPlayer: Player.white,
         flipToPlayer: Player.black,
       ),
     ),
 
-    // 5. Результат — 3 чёрных, 2 белых
+    // 5. Результат — (1,1) теперь чёрная
     _TutStep(
       title: (l) => l.tutStep5Title,
       desc: (l) => l.tutStep5Desc,
       boardBuilder: (_) => _board4(
         pieces: const {
-          (0, 2): Player.black,
-          (1, 1): Player.white,
+          (1, 0): Player.black,
+          (1, 1): Player.black,  // перевёрнутая
           (1, 2): Player.black,
           (2, 1): Player.black,
           (2, 2): Player.white,
         },
-        glowPiece: (1, 2), // перевёрнутая — светится
+        glowPiece: (1, 1),
       ),
     ),
 
@@ -516,20 +520,20 @@ class _BoardPainter extends CustomPainter {
       }
     }
 
-    // Подсветки
+    // Подсветки — жёлтые точки
     for (final h in hints) {
       final rect = _cell(h.$1, h.$2, cell);
       canvas.drawRRect(
           RRect.fromRectAndRadius(rect, const Radius.circular(4)),
           Paint()
             ..color =
-            const Color(0xFF2ECC71).withOpacity(hintOpacity * 0.55));
+            const Color(0xFFF1C40F).withOpacity(hintOpacity * 0.4));
       canvas.drawCircle(
           rect.center,
-          cell * 0.2,
+          cell * 0.22,
           Paint()
             ..color =
-            const Color(0xFF2ECC71).withOpacity(hintOpacity));
+            const Color(0xFFF1C40F).withOpacity(hintOpacity));
     }
 
     // Звёзды в углах

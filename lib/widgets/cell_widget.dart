@@ -6,11 +6,12 @@ import '../utils/constants.dart';
 /// Виджет клетки игрового поля
 class CellWidget extends StatefulWidget {
   final Cell cell;
-  final bool isValidMove;  // Для кликабельности
-  final bool showHint;     // Для отображения подсказки
+  final bool isValidMove;
+  final bool showHint;
   final VoidCallback? onTap;
   final Color boardColor;
   final Color gridLineColor;
+  final Color hintColor;
 
   const CellWidget({
     Key? key,
@@ -20,6 +21,7 @@ class CellWidget extends StatefulWidget {
     this.onTap,
     this.boardColor = GameConstants.boardColor,
     this.gridLineColor = GameConstants.gridLineColor,
+    this.hintColor = GameConstants.validMoveColor,
   }) : super(key: key);
 
   @override
@@ -96,7 +98,7 @@ class _CellWidgetState extends State<CellWidget>
           borderRadius: BorderRadius.circular(GameConstants.borderRadius),
           border: Border.all(
             color: widget.gridLineColor,
-            width: 1,
+            width: 0.5,
           ),
         ),
         child: Stack(
@@ -105,34 +107,30 @@ class _CellWidgetState extends State<CellWidget>
             if (widget.showHint)
               Center(
                 child: TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0.6, end: 1.0),
-                  duration: const Duration(milliseconds: 800),
+                  tween: Tween(begin: 0.5, end: 1.0),
+                  duration: const Duration(milliseconds: 700),
                   curve: Curves.easeInOut,
                   builder: (context, value, child) {
                     return Transform.scale(
-                      scale: value,
-                      child: Opacity(
-                        opacity: value,
-                        child: Container(
-                          width: 16,
-                          height: 16,
-                          decoration: BoxDecoration(
-                            color: GameConstants.validMoveColor,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: GameConstants.validMoveColor,
-                                blurRadius: 8 * value,
-                                spreadRadius: 2 * value,
-                              ),
-                            ],
-                          ),
+                      scale: 0.75 + 0.25 * value,
+                      child: Container(
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          color: widget.hintColor.withOpacity(0.85 + 0.15 * value),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: widget.hintColor.withOpacity(0.6 * value),
+                              blurRadius: 10 * value,
+                              spreadRadius: 2 * value,
+                            ),
+                          ],
                         ),
                       ),
                     );
                   },
                   onEnd: () {
-                    // Перезапуск анимации (пульсация)
                     if (mounted && widget.showHint) {
                       setState(() {});
                     }

@@ -466,13 +466,13 @@ class AppLocalizations {
     zh: '合法走法——夹住对手',
   );
   String get tutStep2Desc => _s(
-    en: 'Black goes first. Yellow dots show valid moves — each one sandwiches at least one white piece between a new black piece and an existing black piece.',
-    ru: 'Чёрные ходят первыми. Жёлтые точки — допустимые ходы. Каждый из них окружает хотя бы одну белую фишку между новой и уже стоящей чёрной.',
-    he: 'השחור הולך ראשון. נקודות צהובות מציגות מהלכים חוקיים — כל אחד לוכד לפחות כלי לבן אחד בין כלי שחור חדש לישן.',
-    es: 'Las negras van primero. Los puntos amarillos muestran movimientos válidos — cada uno atrapa al menos una pieza blanca entre una nueva negra y una existente.',
-    fr: 'Les noirs jouent en premier. Les points jaunes montrent les mouvements valides — chacun piège au moins une pièce blanche entre la nouvelle noire et une existante.',
-    de: 'Schwarz ist zuerst dran. Gelbe Punkte zeigen gültige Züge — jeder schließt mindestens einen weißen Stein zwischen dem neuen und einem bestehenden schwarzen ein.',
-    zh: '黑棋先走。黄色圆点显示合法走法——每步至少将一枚白棋夹在新黑棋和已有黑棋之间。',
+    en: 'Black goes first. Yellow dots are valid moves. Each one sandwiches at least one white piece in a straight line between the new black piece and an existing black piece.',
+    ru: 'Чёрные ходят первыми. Жёлтые точки — допустимые ходы. Каждая клетка зажимает хотя бы одну белую фишку по прямой между новой чёрной и уже стоящей чёрной.',
+    he: 'השחור הולך ראשון. נקודות צהובות הן מהלכים חוקיים. כל אחד לוכד לפחות כלי לבן אחד בקו ישר בין כלי שחור חדש לקיים.',
+    es: 'Las negras van primero. Los puntos amarillos son movimientos válidos. Cada uno atrapa al menos una pieza blanca en línea recta entre la nueva negra y una existente.',
+    fr: 'Les noirs jouent en premier. Les points jaunes sont des coups valides. Chacun piège au moins une pièce blanche en ligne droite entre la nouvelle noire et une existante.',
+    de: 'Schwarz ist zuerst dran. Gelbe Punkte sind gültige Züge. Jeder schließt mindestens einen weißen Stein in gerader Linie zwischen dem neuen und einem bestehenden schwarzen ein.',
+    zh: '黑棋先走。黄色圆点是合法走法。每步在直线上将至少一枚白棋夹在新黑棋和已有黑棋之间。',
   );
 
   String get tutStep3Title => _s(
