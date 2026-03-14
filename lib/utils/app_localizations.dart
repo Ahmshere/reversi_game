@@ -514,22 +514,22 @@ class AppLocalizations {
   );
 
   String get tutStep5Title => _s(
-    en: 'Result — flipped pieces change color',
-    ru: 'Результат — перевёрнутые фишки меняют цвет',
-    he: 'תוצאה — כלים שהופכים משנים צבע',
-    es: 'Resultado — las piezas volteadas cambian de color',
-    fr: 'Résultat — les pièces retournées changent de couleur',
-    de: 'Ergebnis — umgedrehte Steine wechseln die Farbe',
-    zh: '结果——被翻转的棋子改变颜色',
+    en: 'Result: 4 black, 1 white — white moves next',
+    ru: 'Итог: 4 чёрных, 1 белая — ход белых',
+    he: 'תוצאה: 4 שחורים, 1 לבן — תור הלבן',
+    es: 'Resultado: 4 negras, 1 blanca — mueven las blancas',
+    fr: 'Résultat : 4 noires, 1 blanche — les blancs jouent',
+    de: 'Ergebnis: 4 schwarz, 1 weiß — Weiß ist dran',
+    zh: '结果：4黑1白——轮到白棋',
   );
   String get tutStep5Desc => _s(
-    en: 'After placing, all opponent pieces between your new piece and an existing one flip to your color. Black now has 3 pieces, white has 2.',
-    ru: 'После хода все фишки соперника, оказавшиеся между новой и уже стоящей вашей, переворачиваются. Теперь у чёрных 3 фишки, у белых — 2.',
-    he: 'לאחר ההנחה, כל כלי היריב שבין הכלי החדש לקיים הופכים לצבע שלך. לשחור עכשיו 3 כלים, ללבן 2.',
-    es: 'Después de colocar, todas las piezas del oponente entre la nueva y una existente se voltean a tu color. Negro ahora tiene 3 piezas, blanco tiene 2.',
-    fr: 'Après avoir placé, toutes les pièces adverses entre la nouvelle et une existante se retournent. Noir a maintenant 3 pièces, blanc en a 2.',
-    de: 'Nach dem Setzen werden alle gegnerischen Steine zwischen dem neuen und einem bestehenden umgedreht. Schwarz hat jetzt 3, Weiß hat 2.',
-    zh: '落子后，夹在新棋子与原有棋子之间的所有对手棋子都翻转为你的颜色。现在黑方有3枚，白方有2枚。',
+    en: 'The flipped piece glows — it changed from white to black. Black now has 4 pieces, white has only 1. Now white must find a move that sandwiches at least one black piece.',
+    ru: 'Перевёрнутая фишка подсвечена — она стала чёрной. У чёрных теперь 4 фишки, у белых всего 1. Теперь белые должны найти ход, который окружит хотя бы одну чёрную.',
+    he: 'הכלי שהופך מוארגן — הוא הפך משחור ללבן. לשחור יש עכשיו 4 כלים, ללבן רק 1. עכשיו הלבן חייב למצוא מהלך שלוכד לפחות כלי שחור אחד.',
+    es: 'La pieza volteada brilla — cambió de blanca a negra. Las negras tienen ahora 4 piezas, las blancas solo 1. Ahora las blancas deben encontrar un movimiento que capture al menos una negra.',
+    fr: 'La pièce retournée brille — elle est passée de blanche à noire. Les noirs ont maintenant 4 pièces, les blancs seulement 1. Maintenant les blancs doivent trouver un coup qui capture au moins une noire.',
+    de: 'Der umgedrehte Stein leuchtet — er wechselte von weiß zu schwarz. Schwarz hat jetzt 4 Steine, Weiß nur 1. Jetzt muss Weiß einen Zug finden, der mindestens einen schwarzen Stein einschließt.',
+    zh: '翻转的棋子发光——它从白变成了黑。黑棋现在有4枚，白棋只有1枚。现在白棋必须找到一步能夹住至少一枚黑棋的走法。',
   );
 
   String get tutStep6Title => _s(
@@ -542,13 +542,13 @@ class AppLocalizations {
     zh: '斜线方向同样可以夹子',
   );
   String get tutStep6Desc => _s(
-    en: 'Capturing works in all 8 directions — horizontal, vertical, and diagonal. Here black (top-left) captures 2 white pieces diagonally in one move.',
-    ru: 'Захват работает во всех 8 направлениях — по горизонтали, вертикали и диагонали. Здесь чёрная (слева вверху) захватывает 2 белых по диагонали за один ход.',
-    he: 'לכידה עובדת בכל 8 הכיוונים — אופקי, אנכי ואלכסוני. כאן השחור (שמאל-למעלה) לוכד 2 לבנים אלכסונית במהלך אחד.',
-    es: 'La captura funciona en las 8 direcciones — horizontal, vertical y diagonal. Aquí negro (arriba-izquierda) captura 2 piezas blancas en diagonal en un movimiento.',
-    fr: 'La capture fonctionne dans les 8 directions — horizontal, vertical et diagonal. Ici, noir (en haut à gauche) capture 2 pièces blanches en diagonale en un coup.',
-    de: 'Einnahmen funktionieren in allen 8 Richtungen — horizontal, vertikal und diagonal. Hier nimmt Schwarz (oben links) 2 weiße Steine diagonal in einem Zug.',
-    zh: '夹子在所有8个方向都有效——水平、垂直和对角线。这里黑棋（左上角）一步斜向夹住了2枚白棋。',
+    en: 'Capturing works in all 8 directions — horizontal, vertical, and diagonal. Here we place a black piece top-left. The existing black piece bottom-right is the anchor — 2 white pieces between them are captured diagonally.',
+    ru: 'Захват работает во всех 8 направлениях — по горизонтали, вертикали и диагонали. Ставим чёрную фишку слева вверху. Якорная чёрная — справа внизу. 2 белых между ними захватываются по диагонали.',
+    he: 'לכידה עובדת בכל 8 הכיוונים. מניחים כלי שחור בפינה שמאל-למעלה. הכלי השחור העוגן נמצא ימין-למטה. 2 לבנים ביניהם נלכדים אלכסונית.',
+    es: 'La captura funciona en las 8 direcciones. Colocamos una negra arriba-izquierda. La negra ancla está abajo-derecha. 2 blancas entre ellas son capturadas diagonalmente.',
+    fr: 'La capture fonctionne dans les 8 directions. On place une noire en haut-gauche. La noire ancre est en bas-droite. 2 blanches entre elles sont capturées en diagonale.',
+    de: 'Einnahmen funktionieren in allen 8 Richtungen. Wir setzen einen schwarzen Stein oben-links. Der schwarze Ankerpool ist unten-rechts. 2 weiße Steine dazwischen werden diagonal eingenommen.',
+    zh: '夹子在所有8个方向都有效。我们将黑棋放在左上角。右下角是己方锚棋。两者之间的2枚白棋被斜向夹住。',
   );
 
   String get tutStep7Title => _s(

@@ -173,7 +173,7 @@ class _TutorialScreenState extends State<TutorialScreen>
       ),
     ),
 
-    // 6. Диагональный захват
+    // 6. Диагональный захват — ставим в (0,0), якорь в (3,3), стрелка снизу-справа вверх-влево
     _TutStep(
       title: (l) => l.tutStep6Title,
       desc: (l) => l.tutStep6Desc,
@@ -181,16 +181,16 @@ class _TutorialScreenState extends State<TutorialScreen>
         pieces: const {
           (1, 1): Player.white,
           (2, 2): Player.white,
-          (3, 3): Player.black,
+          (3, 3): Player.black,  // якорная чёрная
         },
-        hints: const [(0, 0)],
-        hintOpacity: 0.4 + 0.5 * a,
+        hints: const [(0, 0)],   // сюда ставим новую чёрную
+        hintOpacity: 0.8 + 0.2 * a,
         arrows: const [
           _Arrow(
-              fromRow: 0,
-              fromCol: 0,
-              toRow: 3,
-              toCol: 3,
+              fromRow: 3,      // от якоря снизу-справа
+              fromCol: 3,
+              toRow: 0,        // к новой фишке вверху-слева
+              toCol: 0,
               color: Color(0xFFE74C3C)),
         ],
       ),
