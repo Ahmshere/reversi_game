@@ -4,6 +4,7 @@ import '../utils/constants.dart';
 import '../utils/board_theme.dart';
 import '../utils/audio_service.dart';
 import '../utils/app_localizations.dart';
+import '../version.dart';
 import 'game_screen.dart';
 import 'settings_screen.dart';
 import 'tutorial_screen.dart';
@@ -94,6 +95,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: Colors.white.withOpacity(0.7),
                       fontSize: 16,
                     ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'v$appVersion',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.25),
+                    fontSize: 12,
+                    letterSpacing: 1.2,
                   ),
                 ),
               ],
