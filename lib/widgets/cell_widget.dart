@@ -182,28 +182,73 @@ class _CellWidgetState extends State<CellWidget>
   /// Создать фишку
   Widget _buildPiece(Player player) {
     final isBlack = player == Player.black;
-    final colors = isBlack
+    final baseColors = isBlack
         ? GameConstants.blackGradient
         : GameConstants.whiteGradient;
 
     return FractionallySizedBox(
       widthFactor: GameConstants.pieceScale,
       heightFactor: GameConstants.pieceScale,
-      child: Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(
-            colors: colors,
-            center: const Alignment(-0.3, -0.3),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              blurRadius: 4,
-              offset: const Offset(2, 2),
+      child: Stack(
+        children: [
+          // Основной корпус фишки — радиальный градиент снизу-справа (объём)
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: baseColors,
+                center: const Alignment(0.3, 0.4),
+                radius: 0.85,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isBlack ? 0.5 : 0.25),
+                  blurRadius: 6,
+                  offset: const Offset(2, 3),
+                ),
+                // Внутренняя тень снизу для глубины
+                BoxShadow(
+                  color: Colors.black.withOpacity(isBlack ? 0.3 : 0.12),
+                  blurRadius: 3,
+                  offset: const Offset(1, 2),
+                  spreadRadius: -1,
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          // Блик — белое пятно сверху-слева (имитация освещения)
+          Positioned.fill(
+            child: FractionallySizedBox(
+              widthFactor: 0.55,
+              heightFactor: 0.55,
+              alignment: const Alignment(-0.55, -0.55),
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      Colors.white.withOpacity(isBlack ? 0.28 : 0.75),
+                      Colors.white.withOpacity(0.0),
+                    ],
+                    center: Alignment.center,
+                    radius: 1.0,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Тонкий ободок для белых фишек (выделение края)
+          if (!isBlack)
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.grey.withOpacity(0.3),
+                  width: 0.8,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

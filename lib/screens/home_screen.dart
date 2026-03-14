@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import '../models/game_state.dart';
 import '../utils/constants.dart';
 import '../utils/board_theme.dart';
+import '../utils/audio_service.dart';
+import '../utils/app_localizations.dart';
 import 'game_screen.dart';
 import 'settings_screen.dart';
 
-/// Главный экран с меню
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
@@ -15,20 +16,28 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   BoardTheme _selectedTheme = BoardTheme.classic;
+  final AudioService _audio = AudioService();
+  AppLanguage _language = AppLanguage.english;
+
+  AppLocalizations get _loc => AppLocalizations(_language);
 
   @override
   Widget build(BuildContext context) {
+    final loc = _loc;
+
     return Scaffold(
       backgroundColor: GameConstants.backgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          // Кнопка настроек
-          IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white),
-            onPressed: () => _showSettings(context),
-            tooltip: 'Settings',
+          Padding(
+            padding: const EdgeInsets.only(right: 12.0),
+            child: IconButton(
+              icon: const Icon(Icons.settings, color: Colors.white),
+              onPressed: () => _showSettings(context),
+              tooltip: loc.settings,
+            ),
           ),
         ],
       ),
@@ -39,14 +48,13 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Заголовок
                 Text(
-                  'REVERSI',
+                  loc.appTitle,
                   style: GameConstants.titleStyle.copyWith(fontSize: 48),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Classic Othello',
+                  loc.appSubtitle,
                   style: TextStyle(
                     fontSize: 18,
                     color: Colors.white.withOpacity(0.7),
@@ -54,8 +62,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 60),
-
-                // Декоративные фишки
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -65,28 +71,24 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
                 const SizedBox(height: 60),
-
-                // Кнопки выбора режима
                 _buildMenuButton(
                   context,
-                  label: 'VS PLAYER',
+                  label: loc.vsPlayer,
                   icon: Icons.people,
                   onPressed: () => _startGame(context, GameMode.vsPlayer),
                 ),
                 const SizedBox(height: 16),
                 _buildMenuButton(
                   context,
-                  label: 'VS COMPUTER',
+                  label: loc.vsComputer,
                   icon: Icons.computer,
                   onPressed: () => _startGame(context, GameMode.vsAI),
                 ),
                 const SizedBox(height: 40),
-
-                // Правила
                 TextButton(
                   onPressed: () => _showRules(context),
                   child: Text(
-                    'How to Play',
+                    loc.howToPlay,
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.7),
                       fontSize: 16,
@@ -143,10 +145,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Icon(icon, size: 24),
             const SizedBox(width: 12),
-            Text(
-              label,
-              style: GameConstants.buttonStyle,
-            ),
+            Text(label, style: GameConstants.buttonStyle),
           ],
         ),
       ),
@@ -160,6 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context) => GameScreen(
           gameMode: mode,
           initialTheme: _selectedTheme,
+          initialLanguage: _language,
         ),
       ),
     );
@@ -169,49 +169,52 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => SettingsScreen(
-          currentTheme: _selectedTheme,
-          onThemeChanged: (theme) {
-            setState(() {
-              _selectedTheme = theme;
-            });
-            Navigator.pop(context);
-          },
+        builder: (context) => StatefulBuilder(
+          builder: (context, setModalState) => SettingsScreen(
+            currentTheme: _selectedTheme,
+            soundEnabled: _audio.soundEnabled,
+            onToggleSound: () {
+              _audio.setSoundEnabled(!_audio.soundEnabled);
+              setModalState(() {});
+              setState(() {});
+            },
+            currentLanguage: _language,
+            onLanguageChanged: (lang) {
+              setModalState(() => _language = lang);
+              setState(() => _language = lang);
+            },
+            onThemeChanged: (theme) {
+              setState(() => _selectedTheme = theme);
+              Navigator.pop(context);
+            },
+            loc: _loc,
+          ),
         ),
       ),
     );
   }
 
   void _showRules(BuildContext context) {
+    final loc = _loc;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: GameConstants.backgroundColor,
-        title: const Text(
-          'How to Play',
-          style: TextStyle(color: Colors.white),
+        title: Text(
+          loc.rulesTitle,
+          style: const TextStyle(color: Colors.white),
         ),
         content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: const [
-              Text(
-                '1. Players take turns placing pieces\n\n'
-                    '2. Trap opponent\'s pieces between yours\n\n'
-                    '3. Trapped pieces flip to your color\n\n'
-                    '4. You must flip at least one piece per turn\n\n'
-                    '5. If you can\'t move, turn is skipped\n\n'
-                    '6. Most pieces at the end wins!',
-                style: TextStyle(color: Colors.white70, fontSize: 14),
-              ),
-            ],
+          child: Text(
+            loc.rulesText,
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('GOT IT', style: TextStyle(color: Colors.white)),
+            child: Text(loc.gotIt,
+                style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),

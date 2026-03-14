@@ -4,21 +4,26 @@ import 'cell.dart';
 import '../utils/constants.dart';
 import '../utils/ai_player.dart';
 import '../utils/board_theme.dart';
+import '../utils/audio_service.dart';
+import '../utils/app_localizations.dart';
 
 /// Режим игры
 enum GameMode {
-  vsPlayer, // Игрок против игрока
-  vsAI, // Игрок против компьютера
+  vsPlayer,
+  vsAI,
 }
 
 /// Класс управления состоянием игры
 class GameState extends ChangeNotifier {
   late Board _board;
   GameMode _gameMode = GameMode.vsPlayer;
-  bool _showValidMoves = false; // По умолчанию выключены
+  bool _showValidMoves = false;
   bool _isProcessing = false;
+  bool _showSkipBanner = false;
   late AIPlayer _aiPlayer;
   BoardTheme _boardTheme = BoardTheme.classic;
+  final AudioService _audio = AudioService();
+  AppLanguage _language = AppLanguage.english;
 
   GameState() {
     _board = Board();
@@ -30,9 +35,13 @@ class GameState extends ChangeNotifier {
   GameMode get gameMode => _gameMode;
   bool get showValidMoves => _showValidMoves;
   bool get isProcessing => _isProcessing;
+  bool get showSkipBanner => _showSkipBanner;
   Player get currentPlayer => _board.currentPlayer;
   AIDifficulty get aiDifficulty => _aiPlayer.difficulty;
   BoardTheme get boardTheme => _boardTheme;
+  bool get soundEnabled => _audio.soundEnabled;
+  AppLanguage get language => _language;
+  AppLocalizations get loc => AppLocalizations(_language);
 
   int get blackScore => _board.countPieces(Player.black);
   int get whiteScore => _board.countPieces(Player.white);
@@ -42,36 +51,51 @@ class GameState extends ChangeNotifier {
 
   List<Cell> get validMoves => _board.getValidMoves();
 
-  /// Установить режим игры
   void setGameMode(GameMode mode) {
     _gameMode = mode;
     notifyListeners();
   }
 
-  /// Установить сложность AI
   void setAIDifficulty(AIDifficulty difficulty) {
     _aiPlayer = AIPlayer(difficulty: difficulty);
     notifyListeners();
   }
 
-  /// Установить тему доски
   void setBoardTheme(BoardTheme theme) {
     _boardTheme = theme;
     notifyListeners();
   }
 
-  /// Переключить отображение валидных ходов
+  void toggleSound() {
+    _audio.setSoundEnabled(!_audio.soundEnabled);
+    notifyListeners();
+  }
+
+  void setLanguage(AppLanguage lang) {
+    _language = lang;
+    notifyListeners();
+  }
+
   void toggleShowValidMoves() {
     _showValidMoves = !_showValidMoves;
     notifyListeners();
   }
 
-  /// Проверка валидности хода
   bool isValidMove(int row, int col) {
     return _board.isValidMove(row, col);
   }
 
-  /// Сделать ход
+  /// Показать баннер "нет ходов" на 3 секунды, затем пропустить ход
+  Future<void> _showSkipBannerAndSkip() async {
+    _showSkipBanner = true;
+    notifyListeners();
+    _audio.playSkipTurn();
+    await Future.delayed(const Duration(seconds: 3));
+    _showSkipBanner = false;
+    _board.skipTurn();
+    notifyListeners();
+  }
+
   Future<List<Cell>> makeMove(int row, int col) async {
     if (_isProcessing || !isValidMove(row, col)) {
       return [];
@@ -80,7 +104,6 @@ class GameState extends ChangeNotifier {
     _isProcessing = true;
     notifyListeners();
 
-    // Небольшая задержка для плавности
     await Future.delayed(const Duration(milliseconds: 100));
 
     List<Cell> flippedCells = _board.makeMove(row, col);
@@ -88,14 +111,20 @@ class GameState extends ChangeNotifier {
     _isProcessing = false;
     notifyListeners();
 
-    // Проверяем, есть ли ходы у следующего игрока
-    if (!isGameOver && validMoves.isEmpty) {
-      // Если нет ходов, пропускаем ход
-      await Future.delayed(const Duration(milliseconds: 500));
-      skipTurn();
+    if (flippedCells.length > 2) {
+      _audio.playFlip();
+    } else {
+      _audio.playMove();
     }
 
-    // Если играем против AI и сейчас ход белых (AI)
+    if (!isGameOver && validMoves.isEmpty) {
+      await _showSkipBannerAndSkip();
+    }
+
+    if (isGameOver) {
+      _playGameOverSound();
+    }
+
     if (_gameMode == GameMode.vsAI &&
         currentPlayer == Player.white &&
         !isGameOver) {
@@ -105,31 +134,29 @@ class GameState extends ChangeNotifier {
     return flippedCells;
   }
 
-  /// Ход AI
   Future<void> _makeAIMove() async {
-    if (_isProcessing || isGameOver) {
-      return;
-    }
+    if (_isProcessing || isGameOver) return;
 
     _isProcessing = true;
     notifyListeners();
 
-    // AI выбирает лучший ход
     Cell? aiMove = await _aiPlayer.getBestMove(_board);
 
     if (aiMove != null) {
       _board.makeMove(aiMove.row, aiMove.col);
       notifyListeners();
+      _audio.playMove();
 
-      // Проверяем, есть ли ходы у следующего игрока
       if (!isGameOver && validMoves.isEmpty) {
-        await Future.delayed(const Duration(milliseconds: 500));
-        skipTurn();
+        await _showSkipBannerAndSkip();
 
-        // Если после пропуска хода снова ход AI, делаем еще один ход
         if (currentPlayer == Player.white && !isGameOver) {
           await _makeAIMove();
         }
+      }
+
+      if (isGameOver) {
+        _playGameOverSound();
       }
     }
 
@@ -137,35 +164,40 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Пропустить ход
   void skipTurn() {
     _board.skipTurn();
     notifyListeners();
   }
 
-  /// Начать новую игру
   void newGame({GameMode? mode}) {
     _board.reset();
-    if (mode != null) {
-      _gameMode = mode;
-    }
+    if (mode != null) _gameMode = mode;
     _isProcessing = false;
+    _showSkipBanner = false;
     notifyListeners();
   }
 
-  /// Получить текст победителя
-  String getWinnerText() {
-    if (!isGameOver) {
-      return '';
-    }
-
-    Player? gameWinner = winner;
-    if (gameWinner == Player.black) {
-      return 'Black Wins!';
-    } else if (gameWinner == Player.white) {
-      return 'White Wins!';
+  void _playGameOverSound() {
+    final w = winner;
+    if (w == Player.none) {
+      _audio.playDraw();
+    } else if (_gameMode == GameMode.vsAI) {
+      if (w == Player.black) {
+        _audio.playWin();
+      } else {
+        _audio.playLose();
+      }
     } else {
-      return 'Draw!';
+      _audio.playWin();
     }
+  }
+
+  String getWinnerText() {
+    if (!isGameOver) return '';
+    final l = loc;
+    final w = winner;
+    if (w == Player.black) return l.blackWins;
+    if (w == Player.white) return l.whiteWins;
+    return l.draw;
   }
 }

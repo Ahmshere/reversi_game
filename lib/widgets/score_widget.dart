@@ -6,12 +6,16 @@ class ScoreWidget extends StatelessWidget {
   final int blackScore;
   final int whiteScore;
   final Player currentPlayer;
+  final String blackLabel;
+  final String whiteLabel;
 
   const ScoreWidget({
     Key? key,
     required this.blackScore,
     required this.whiteScore,
     required this.currentPlayer,
+    this.blackLabel = 'Black',
+    this.whiteLabel = 'White',
   }) : super(key: key);
 
   @override
@@ -29,7 +33,7 @@ class ScoreWidget extends StatelessWidget {
             color: GameConstants.blackPlayerColor,
             score: blackScore,
             isActive: currentPlayer == Player.black,
-            label: 'Black',
+            label: blackLabel,
           ),
           Container(
             width: 2,
@@ -40,7 +44,7 @@ class ScoreWidget extends StatelessWidget {
             color: GameConstants.whitePlayerColor,
             score: whiteScore,
             isActive: currentPlayer == Player.white,
-            label: 'White',
+            label: whiteLabel,
           ),
         ],
       ),
@@ -70,12 +74,12 @@ class ScoreWidget extends StatelessWidget {
                 ),
                 boxShadow: isActive
                     ? [
-                        BoxShadow(
-                          color: Colors.yellowAccent.withOpacity(0.5),
-                          blurRadius: 8,
-                          spreadRadius: 2,
-                        ),
-                      ]
+                  BoxShadow(
+                    color: Colors.yellowAccent.withOpacity(0.5),
+                    blurRadius: 8,
+                    spreadRadius: 2,
+                  ),
+                ]
                     : null,
               ),
             ),

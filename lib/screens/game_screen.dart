@@ -3,19 +3,21 @@ import 'package:provider/provider.dart';
 import '../models/game_state.dart';
 import '../utils/constants.dart';
 import '../utils/board_theme.dart';
+import '../utils/app_localizations.dart';
 import '../widgets/board_widget.dart';
 import '../widgets/score_widget.dart';
 import 'settings_screen.dart';
 
-/// Экран игры
 class GameScreen extends StatelessWidget {
   final GameMode gameMode;
   final BoardTheme initialTheme;
+  final AppLanguage initialLanguage;
 
   const GameScreen({
     Key? key,
     required this.gameMode,
     this.initialTheme = BoardTheme.classic,
+    this.initialLanguage = AppLanguage.english,
   }) : super(key: key);
 
   @override
@@ -23,7 +25,8 @@ class GameScreen extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) => GameState()
         ..setGameMode(gameMode)
-        ..setBoardTheme(initialTheme),
+        ..setBoardTheme(initialTheme)
+        ..setLanguage(initialLanguage),
       child: const _GameScreenContent(),
     );
   }
@@ -34,141 +37,151 @@ class _GameScreenContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: GameConstants.backgroundColor,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'REVERSI',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        actions: [
-          Consumer<GameState>(
-            builder: (context, gameState, _) {
-              return IconButton(
-                icon: Icon(
-                  gameState.showValidMoves
-                      ? Icons.visibility
-                      : Icons.visibility_off,
+    return Consumer<GameState>(
+      builder: (context, gameState, _) {
+        final loc = gameState.loc;
+
+        return WillPopScope(
+          onWillPop: () async {
+            if (gameState.isGameOver) return true;
+            return await _showExitConfirmation(context, loc) ?? false;
+          },
+          child: Scaffold(
+            backgroundColor: GameConstants.backgroundColor,
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () async {
+                  if (gameState.isGameOver) {
+                    Navigator.pop(context);
+                    return;
+                  }
+                  final shouldExit =
+                      await _showExitConfirmation(context, loc) ?? false;
+                  if (shouldExit && context.mounted) Navigator.pop(context);
+                },
+              ),
+              title: Text(
+                loc.appTitle,
+                style: const TextStyle(
                   color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
                 ),
-                onPressed: gameState.toggleShowValidMoves,
-                tooltip: 'Toggle hints',
-              );
-            },
-          ),
-          Consumer<GameState>(
-            builder: (context, gameState, _) {
-              return IconButton(
-                icon: const Icon(Icons.settings, color: Colors.white),
-                onPressed: () => _showSettings(context, gameState),
-                tooltip: 'Settings',
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: () => _showNewGameDialog(context),
-            tooltip: 'New game',
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Consumer<GameState>(
-          builder: (context, gameState, _) {
-            // Проверяем окончание игры
-            if (gameState.isGameOver) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                _showGameOverDialog(context, gameState);
-              });
-            }
+              ),
+              actions: [
+                IconButton(
+                  icon: Icon(
+                    gameState.showValidMoves
+                        ? Icons.visibility
+                        : Icons.visibility_off,
+                    color: Colors.white,
+                  ),
+                  onPressed: gameState.toggleShowValidMoves,
+                  tooltip: loc.toggleHints,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.settings, color: Colors.white),
+                  onPressed: () => _showSettings(context, gameState),
+                  tooltip: loc.settings,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.refresh, color: Colors.white),
+                  onPressed: () => _showNewGameDialog(context, loc),
+                  tooltip: loc.newGame,
+                ),
+              ],
+            ),
+            body: SafeArea(
+              child: Builder(
+                builder: (context) {
+                  if (gameState.isGameOver) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _showGameOverDialog(context, gameState, loc);
+                    });
+                  }
 
-            return Column(
-              children: [
-                // Основной контент игры
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      children: [
-                        // Счет
-                        ScoreWidget(
-                          blackScore: gameState.blackScore,
-                          whiteScore: gameState.whiteScore,
-                          currentPlayer: gameState.currentPlayer,
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Текущий игрок
-                        _buildCurrentPlayerIndicator(gameState),
-                        const SizedBox(height: 16),
-
-                        // Доска - занимает доступное пространство
-                        Expanded(
-                          child: Center(
-                            child: AspectRatio(
-                              aspectRatio: 1.0,
-                              child: BoardWidget(
-                                board: gameState.board,
-                                validMoves: gameState.validMoves,
-                                showValidMoves: gameState.showValidMoves,
-                                onCellTap: (row, col) =>
-                                    _handleCellTap(context, gameState, row, col),
-                                boardTheme: gameState.boardTheme,
+                  return Column(
+                    children: [
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8.0, vertical: 12.0),
+                          child: Column(
+                            children: [
+                              ScoreWidget(
+                                blackScore: gameState.blackScore,
+                                whiteScore: gameState.whiteScore,
+                                currentPlayer: gameState.currentPlayer,
+                                blackLabel: loc.blackPlayer,
+                                whiteLabel: loc.whitePlayer,
                               ),
+                              const SizedBox(height: 12),
+                              _buildCurrentPlayerIndicator(gameState, loc),
+                              const SizedBox(height: 12),
+                              Expanded(
+                                child: Center(
+                                  child: AspectRatio(
+                                    aspectRatio: 1.0,
+                                    child: BoardWidget(
+                                      board: gameState.board,
+                                      validMoves: gameState.validMoves,
+                                      showValidMoves: gameState.showValidMoves,
+                                      onCellTap: (row, col) => _handleCellTap(
+                                          context, gameState, row, col),
+                                      boardTheme: gameState.boardTheme,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              // Баннер "нет ходов" — виден 3 секунды
+                              AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 400),
+                                child: gameState.showSkipBanner
+                                    ? _buildNoMovesWarning(loc)
+                                    : const SizedBox.shrink(),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Container(
+                        height: 60,
+                        color: Colors.black.withOpacity(0.3),
+                        child: Center(
+                          child: Text(
+                            loc.adPlaceholder,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.5),
+                              fontSize: 12,
                             ),
                           ),
                         ),
-                        const SizedBox(height: 16),
-
-                        // Информация о ходах
-                        if (gameState.validMoves.isEmpty && !gameState.isGameOver)
-                          _buildNoMovesWarning(gameState),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // МЕСТО ДЛЯ РЕКЛАМНОГО БАННЕРА (60px)
-                Container(
-                  height: 60,
-                  color: Colors.black.withOpacity(0.3),
-                  child: Center(
-                    child: Text(
-                      'AD BANNER PLACEHOLDER',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.5),
-                        fontSize: 12,
                       ),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildCurrentPlayerIndicator(GameState gameState) {
+  Widget _buildCurrentPlayerIndicator(GameState gameState, loc) {
     final isBlack = gameState.currentPlayer == Player.black;
     final color = isBlack
         ? GameConstants.blackPlayerColor
         : GameConstants.whitePlayerColor;
-    final label = isBlack ? 'Black' : 'White';
+    final label =
+    isBlack ? loc.blackPlayer : loc.whitePlayer;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
@@ -179,17 +192,14 @@ class _GameScreenContent extends StatelessWidget {
           Container(
             width: 20,
             height: 20,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 12),
           Text(
-            '$label\'s Turn',
+            loc.turnOf(label),
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 18,
+              fontSize: 17,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -198,9 +208,9 @@ class _GameScreenContent extends StatelessWidget {
     );
   }
 
-  Widget _buildNoMovesWarning(GameState gameState) {
+  Widget _buildNoMovesWarning(loc) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.orange.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
@@ -208,15 +218,12 @@ class _GameScreenContent extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.info, color: Colors.orange),
+          const Icon(Icons.info_outline, color: Colors.orange),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'No valid moves! Turn will be skipped.',
-              style: TextStyle(
-                color: Colors.orange.shade100,
-                fontSize: 14,
-              ),
+              loc.noValidMoves,
+              style: TextStyle(color: Colors.orange.shade100, fontSize: 14),
             ),
           ),
         ],
@@ -226,73 +233,95 @@ class _GameScreenContent extends StatelessWidget {
 
   void _handleCellTap(
       BuildContext context, GameState gameState, int row, int col) {
-    if (gameState.isProcessing || !gameState.isValidMove(row, col)) {
-      return;
-    }
-
+    if (gameState.isProcessing || !gameState.isValidMove(row, col)) return;
     gameState.makeMove(row, col);
   }
 
   void _showSettings(BuildContext context, GameState gameState) {
+    final loc = gameState.loc;
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => SettingsScreen(
           currentTheme: gameState.boardTheme,
+          soundEnabled: gameState.soundEnabled,
+          onToggleSound: gameState.toggleSound,
+          currentLanguage: gameState.language,
+          onLanguageChanged: gameState.setLanguage,
           onThemeChanged: (theme) {
             gameState.setBoardTheme(theme);
             Navigator.pop(context);
           },
+          loc: loc,
         ),
       ),
     );
   }
 
-  void _showNewGameDialog(BuildContext context) {
-    showDialog(
+  Future<bool?> _showExitConfirmation(BuildContext context, loc) {
+    return showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: GameConstants.backgroundColor,
-        title: const Text(
-          'New Game',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: const Text(
-          'Start a new game? Current progress will be lost.',
-          style: TextStyle(color: Colors.white70),
-        ),
+        title: Text(loc.leaveGameTitle,
+            style: const TextStyle(color: Colors.white)),
+        content: Text(loc.leaveGameConfirm,
+            style: const TextStyle(color: Colors.white70)),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('CANCEL', style: TextStyle(color: Colors.white)),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(loc.stay,
+                style: const TextStyle(color: Colors.white)),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.read<GameState>().newGame();
-            },
+            onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: GameConstants.boardColor,
-            ),
-            child: const Text('NEW GAME'),
+                backgroundColor: Colors.redAccent.withOpacity(0.8)),
+            child: Text(loc.leave),
           ),
         ],
       ),
     );
   }
 
-  void _showGameOverDialog(BuildContext context, GameState gameState) {
-    final winnerText = gameState.getWinnerText();
-    final blackScore = gameState.blackScore;
-    final whiteScore = gameState.whiteScore;
+  void _showNewGameDialog(BuildContext context, loc) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: GameConstants.backgroundColor,
+        title: Text(loc.newGameTitle,
+            style: const TextStyle(color: Colors.white)),
+        content: Text(loc.newGameConfirm,
+            style: const TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(loc.cancel,
+                style: const TextStyle(color: Colors.white)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.read<GameState>().newGame();
+            },
+            style: ElevatedButton.styleFrom(
+                backgroundColor: GameConstants.boardColor),
+            child: Text(loc.confirm),
+          ),
+        ],
+      ),
+    );
+  }
 
+  void _showGameOverDialog(
+      BuildContext context, GameState gameState, loc) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: GameConstants.backgroundColor,
         title: Text(
-          winnerText,
+          gameState.getWinnerText(),
           style: GameConstants.titleStyle.copyWith(fontSize: 28),
           textAlign: TextAlign.center,
         ),
@@ -300,27 +329,17 @@ class _GameScreenContent extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 16),
-            Text(
-              'Final Score',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.7),
-                fontSize: 16,
-              ),
-            ),
+            Text(loc.finalScore,
+                style: TextStyle(
+                    color: Colors.white.withOpacity(0.7), fontSize: 16)),
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildFinalScore(
-                  'Black',
-                  blackScore,
-                  GameConstants.blackPlayerColor,
-                ),
-                _buildFinalScore(
-                  'White',
-                  whiteScore,
-                  GameConstants.whitePlayerColor,
-                ),
+                _buildFinalScore(loc.blackPlayer, gameState.blackScore,
+                    GameConstants.blackPlayerColor),
+                _buildFinalScore(loc.whitePlayer, gameState.whiteScore,
+                    GameConstants.whitePlayerColor),
               ],
             ),
           ],
@@ -328,20 +347,20 @@ class _GameScreenContent extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context); // Close dialog
-              Navigator.pop(context); // Go back to menu
+              Navigator.pop(ctx);
+              Navigator.pop(context);
             },
-            child: const Text('MENU', style: TextStyle(color: Colors.white)),
+            child:
+            Text(loc.menu, style: const TextStyle(color: Colors.white)),
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(ctx);
               context.read<GameState>().newGame();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: GameConstants.boardColor,
-            ),
-            child: const Text('PLAY AGAIN'),
+                backgroundColor: GameConstants.boardColor),
+            child: Text(loc.playAgain),
           ),
         ],
       ),
@@ -354,28 +373,17 @@ class _GameScreenContent extends StatelessWidget {
         Container(
           width: 32,
           height: 32,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(height: 8),
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 14,
-          ),
-        ),
+        Text(label,
+            style: const TextStyle(color: Colors.white70, fontSize: 14)),
         const SizedBox(height: 4),
-        Text(
-          score.toString(),
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        Text(score.toString(),
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold)),
       ],
     );
   }
