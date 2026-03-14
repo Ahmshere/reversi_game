@@ -429,6 +429,147 @@ class AppLocalizations {
     zh: '广告横幅占位',
   );
 
+  // ── Туториал — навигация ──────────────────────────────────────────────────
+
+  String get tutBack => _s(en:'Back', ru:'Назад', he:'חזרה', es:'Atrás', fr:'Retour', de:'Zurück', zh:'上一步');
+  String get tutNext => _s(en:'Next', ru:'Далее', he:'הבא', es:'Siguiente', fr:'Suivant', de:'Weiter', zh:'下一步');
+  String get tutDone => _s(en:'Done', ru:'Готово', he:'סיום', es:'Listo', fr:'Terminé', de:'Fertig', zh:'完成');
+
+  // ── Туториал — шаги ───────────────────────────────────────────────────────
+
+  String get tutStep1Title => _s(
+    en: 'The board and starting position',
+    ru: 'Доска и начальная позиция',
+    he: 'הלוח ומיקום ההתחלה',
+    es: 'El tablero y posición inicial',
+    fr: 'Le plateau et la position de départ',
+    de: 'Das Brett und die Startposition',
+    zh: '棋盘和起始位置',
+  );
+  String get tutStep1Desc => _s(
+    en: 'Reversi is played on an 8×8 grid. The game starts with 4 pieces in the centre — 2 black and 2 white arranged diagonally.',
+    ru: 'Реверси играется на доске 8×8. Игра начинается с 4 фишек в центре — 2 чёрных и 2 белых, расположенных по диагонали.',
+    he: 'רברסי משחקים על לוח 8×8. המשחק מתחיל עם 4 כלים במרכז — 2 שחורים ו-2 לבנים בסידור אלכסוני.',
+    es: 'Reversi se juega en una cuadrícula de 8×8. El juego comienza con 4 piezas en el centro — 2 negras y 2 blancas en diagonal.',
+    fr: 'Reversi se joue sur une grille 8×8. Le jeu commence avec 4 pièces au centre — 2 noires et 2 blanches en diagonale.',
+    de: 'Reversi wird auf einem 8×8-Raster gespielt. Das Spiel beginnt mit 4 Steinen in der Mitte — 2 schwarze und 2 weiße diagonal angeordnet.',
+    zh: '黑白棋在8×8的棋盘上进行。游戏从中央4枚棋子开始——2枚黑棋和2枚白棋对角排列。',
+  );
+
+  String get tutStep2Title => _s(
+    en: 'Valid moves — sandwich the opponent',
+    ru: 'Допустимые ходы — окружите соперника',
+    he: 'מהלכים חוקיים — לכוד את היריב',
+    es: 'Movimientos válidos — sándwich al oponente',
+    fr: 'Mouvements valides — encerclez l\'adversaire',
+    de: 'Gültige Züge — den Gegner einschließen',
+    zh: '合法走法——夹住对手',
+  );
+  String get tutStep2Desc => _s(
+    en: 'Black goes first. Yellow dots show valid moves — each one sandwiches at least one white piece between a new black piece and an existing black piece.',
+    ru: 'Чёрные ходят первыми. Жёлтые точки — допустимые ходы. Каждый из них окружает хотя бы одну белую фишку между новой и уже стоящей чёрной.',
+    he: 'השחור הולך ראשון. נקודות צהובות מציגות מהלכים חוקיים — כל אחד לוכד לפחות כלי לבן אחד בין כלי שחור חדש לישן.',
+    es: 'Las negras van primero. Los puntos amarillos muestran movimientos válidos — cada uno atrapa al menos una pieza blanca entre una nueva negra y una existente.',
+    fr: 'Les noirs jouent en premier. Les points jaunes montrent les mouvements valides — chacun piège au moins une pièce blanche entre la nouvelle noire et une existante.',
+    de: 'Schwarz ist zuerst dran. Gelbe Punkte zeigen gültige Züge — jeder schließt mindestens einen weißen Stein zwischen dem neuen und einem bestehenden schwarzen ein.',
+    zh: '黑棋先走。黄色圆点显示合法走法——每步至少将一枚白棋夹在新黑棋和已有黑棋之间。',
+  );
+
+  String get tutStep3Title => _s(
+    en: 'Place a piece — the white one flips!',
+    ru: 'Ставим фишку — белая переворачивается!',
+    he: 'מניחים כלי — הלבן מתהפך!',
+    es: '¡Colocar una pieza — la blanca se voltea!',
+    fr: 'Placer une pièce — la blanche se retourne !',
+    de: 'Stein setzen — der weiße wird umgedreht!',
+    zh: '落子——白棋被翻转！',
+  );
+  String get tutStep3Desc => _s(
+    en: 'Black plays at the highlighted cell. The white piece between the two black pieces is now sandwiched — it flips to black! The red arrow shows the direction of capture.',
+    ru: 'Чёрные играют в подсвеченную клетку. Белая фишка оказывается между двух чёрных и переворачивается! Красная стрелка показывает направление захвата.',
+    he: 'השחור משחק בתא המודגש. הכלי הלבן שנמצא בין שני הכלים השחורים נלכד — הוא מתהפך לשחור! החץ האדום מציג את כיוון הלכידה.',
+    es: 'Las negras juegan en la celda resaltada. La pieza blanca entre las dos negras queda atrapada — ¡se voltea a negro! La flecha roja muestra la dirección de captura.',
+    fr: 'Les noirs jouent dans la case surlignée. La pièce blanche entre les deux noires est prise en sandwich — elle se retourne en noire ! La flèche rouge montre la direction de capture.',
+    de: 'Schwarz spielt in das markierte Feld. Der weiße Stein zwischen den beiden schwarzen ist eingeschlossen — er wird zu schwarz! Der rote Pfeil zeigt die Richtung der Aufnahme.',
+    zh: '黑棋落在高亮格子。两枚黑棋之间的白棋被夹住——翻转为黑棋！红色箭头显示捕获方向。',
+  );
+
+  String get tutStep4Title => _s(
+    en: 'After the flip — white\'s turn',
+    ru: 'После переворота — ход белых',
+    he: 'אחרי ההיפוך — תור הלבן',
+    es: 'Después del volteo — turno de blancas',
+    fr: 'Après le retournement — au tour des blancs',
+    de: 'Nach dem Umdrehen — Weiß ist dran',
+    zh: '翻转后——轮到白棋',
+  );
+  String get tutStep4Desc => _s(
+    en: 'Black now has 4 pieces, white has 1. It\'s white\'s turn — white must also make a move that sandwiches at least one black piece. The game alternates until no moves remain.',
+    ru: 'Теперь у чёрных 4 фишки, у белых 1. Ход белых — нужно тоже окружить хотя бы одну чёрную фишку. Игра продолжается поочерёдно, пока у кого-то есть ходы.',
+    he: 'לשחור יש כעת 4 כלים, ללבן יש 1. תור הלבן — הלבן גם צריך לבצע מהלך שלוכד לפחות כלי שחור אחד. המשחק מתחלף עד שאין מהלכים.',
+    es: 'Las negras tienen ahora 4 piezas, las blancas 1. Es el turno de las blancas — también deben hacer un movimiento que atrape al menos una negra. El juego alterna hasta que no quedan movimientos.',
+    fr: 'Les noirs ont maintenant 4 pièces, les blancs 1. C\'est au tour des blancs — ils doivent aussi faire un mouvement qui piège au moins une noire. Le jeu alterne jusqu\'à ce qu\'il n\'y ait plus de coups.',
+    de: 'Schwarz hat jetzt 4 Steine, Weiß hat 1. Weiß ist dran — Weiß muss auch einen Zug machen, der mindestens einen schwarzen Stein einschließt. Das Spiel wechselt ab, bis keine Züge mehr übrig sind.',
+    zh: '黑棋现在有4枚，白棋有1枚。轮到白棋——白棋也必须走一步夹住至少一枚黑棋。双方交替直到无法走棋为止。',
+  );
+
+  String get tutStep5Title => _s(
+    en: 'Result — flipped pieces change color',
+    ru: 'Результат — перевёрнутые фишки меняют цвет',
+    he: 'תוצאה — כלים שהופכים משנים צבע',
+    es: 'Resultado — las piezas volteadas cambian de color',
+    fr: 'Résultat — les pièces retournées changent de couleur',
+    de: 'Ergebnis — umgedrehte Steine wechseln die Farbe',
+    zh: '结果——被翻转的棋子改变颜色',
+  );
+  String get tutStep5Desc => _s(
+    en: 'After placing, all opponent pieces between your new piece and an existing one flip to your color. Black now has 3 pieces, white has 2.',
+    ru: 'После хода все фишки соперника, оказавшиеся между новой и уже стоящей вашей, переворачиваются. Теперь у чёрных 3 фишки, у белых — 2.',
+    he: 'לאחר ההנחה, כל כלי היריב שבין הכלי החדש לקיים הופכים לצבע שלך. לשחור עכשיו 3 כלים, ללבן 2.',
+    es: 'Después de colocar, todas las piezas del oponente entre la nueva y una existente se voltean a tu color. Negro ahora tiene 3 piezas, blanco tiene 2.',
+    fr: 'Après avoir placé, toutes les pièces adverses entre la nouvelle et une existante se retournent. Noir a maintenant 3 pièces, blanc en a 2.',
+    de: 'Nach dem Setzen werden alle gegnerischen Steine zwischen dem neuen und einem bestehenden umgedreht. Schwarz hat jetzt 3, Weiß hat 2.',
+    zh: '落子后，夹在新棋子与原有棋子之间的所有对手棋子都翻转为你的颜色。现在黑方有3枚，白方有2枚。',
+  );
+
+  String get tutStep6Title => _s(
+    en: 'Diagonal capture works too',
+    ru: 'Диагональный захват тоже работает',
+    he: 'לכידה אלכסונית עובדת גם',
+    es: 'La captura diagonal también funciona',
+    fr: 'La capture diagonale fonctionne aussi',
+    de: 'Diagonale Einnahme funktioniert auch',
+    zh: '斜线方向同样可以夹子',
+  );
+  String get tutStep6Desc => _s(
+    en: 'Capturing works in all 8 directions — horizontal, vertical, and diagonal. Here black (top-left) captures 2 white pieces diagonally in one move.',
+    ru: 'Захват работает во всех 8 направлениях — по горизонтали, вертикали и диагонали. Здесь чёрная (слева вверху) захватывает 2 белых по диагонали за один ход.',
+    he: 'לכידה עובדת בכל 8 הכיוונים — אופקי, אנכי ואלכסוני. כאן השחור (שמאל-למעלה) לוכד 2 לבנים אלכסונית במהלך אחד.',
+    es: 'La captura funciona en las 8 direcciones — horizontal, vertical y diagonal. Aquí negro (arriba-izquierda) captura 2 piezas blancas en diagonal en un movimiento.',
+    fr: 'La capture fonctionne dans les 8 directions — horizontal, vertical et diagonal. Ici, noir (en haut à gauche) capture 2 pièces blanches en diagonale en un coup.',
+    de: 'Einnahmen funktionieren in allen 8 Richtungen — horizontal, vertikal und diagonal. Hier nimmt Schwarz (oben links) 2 weiße Steine diagonal in einem Zug.',
+    zh: '夹子在所有8个方向都有效——水平、垂直和对角线。这里黑棋（左上角）一步斜向夹住了2枚白棋。',
+  );
+
+  String get tutStep7Title => _s(
+    en: 'Corners are gold — most pieces wins!',
+    ru: 'Углы — на вес золота! Побеждает тот, у кого больше.',
+    he: 'הפינות הן זהב — המנצח הוא בעל הכלים הרבים!',
+    es: '¡Las esquinas son oro — gana quien tenga más piezas!',
+    fr: 'Les coins valent de l\'or — le plus de pièces gagne !',
+    de: 'Ecken sind Gold — wer die meisten Steine hat, gewinnt!',
+    zh: '角落是黄金——棋子最多者获胜！',
+  );
+  String get tutStep7Desc => _s(
+    en: 'The 4 corner squares (★) can never be flipped once taken — the most valuable spots on the board. When neither player can move, count pieces. Most pieces wins!',
+    ru: 'Четыре угла (★) нельзя перевернуть — самые ценные клетки. Когда ни у кого нет ходов — считаем фишки. Больше фишек — победа!',
+    he: '4 הפינות (★) לא ניתן להפוך לאחר שנתפסו — הריבועים הכי יקרים. כשאף שחקן לא יכול לזוז, סופרים כלים. הכי הרבה — מנצח!',
+    es: 'Las 4 esquinas (★) nunca pueden voltearse una vez capturadas — los lugares más valiosos. Cuando nadie puede moverse, cuenta piezas. ¡Más piezas gana!',
+    fr: 'Les 4 coins (★) ne peuvent jamais être retournés — les cases les plus précieuses. Quand personne ne peut jouer, comptez. Le plus de pièces gagne !',
+    de: 'Die 4 Ecken (★) können nie umgedreht werden — die wertvollsten Felder. Wenn niemand mehr ziehen kann, zählen wir. Die meisten Steine gewinnen!',
+    zh: '4个角落（★）一旦占据永远无法被翻转——最有价值的位置。双方都无法走棋时数棋子，最多者获胜！',
+  );
+
   // ── Внутренний хелпер ─────────────────────────────────────────────────────
 
   String _s({

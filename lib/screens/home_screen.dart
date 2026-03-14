@@ -6,6 +6,7 @@ import '../utils/audio_service.dart';
 import '../utils/app_localizations.dart';
 import 'game_screen.dart';
 import 'settings_screen.dart';
+import 'tutorial_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -195,28 +196,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showRules(BuildContext context) {
-    final loc = _loc;
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: GameConstants.backgroundColor,
-        title: Text(
-          loc.rulesTitle,
-          style: const TextStyle(color: Colors.white),
-        ),
-        content: SingleChildScrollView(
-          child: Text(
-            loc.rulesText,
-            style: const TextStyle(color: Colors.white70, fontSize: 14),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(loc.gotIt,
-                style: const TextStyle(color: Colors.white)),
-          ),
-        ],
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TutorialScreen(loc: _loc),
       ),
     );
   }
