@@ -3,6 +3,7 @@ import 'board.dart';
 import 'cell.dart';
 import '../utils/constants.dart';
 import '../utils/ai_player.dart';
+import '../utils/board_theme.dart';
 
 /// Режим игры
 enum GameMode {
@@ -14,9 +15,10 @@ enum GameMode {
 class GameState extends ChangeNotifier {
   late Board _board;
   GameMode _gameMode = GameMode.vsPlayer;
-  bool _showValidMoves = true;
+  bool _showValidMoves = false; // По умолчанию выключены
   bool _isProcessing = false;
   late AIPlayer _aiPlayer;
+  BoardTheme _boardTheme = BoardTheme.classic;
 
   GameState() {
     _board = Board();
@@ -30,13 +32,14 @@ class GameState extends ChangeNotifier {
   bool get isProcessing => _isProcessing;
   Player get currentPlayer => _board.currentPlayer;
   AIDifficulty get aiDifficulty => _aiPlayer.difficulty;
-  
+  BoardTheme get boardTheme => _boardTheme;
+
   int get blackScore => _board.countPieces(Player.black);
   int get whiteScore => _board.countPieces(Player.white);
-  
+
   bool get isGameOver => _board.isGameOver();
   Player? get winner => _board.getWinner();
-  
+
   List<Cell> get validMoves => _board.getValidMoves();
 
   /// Установить режим игры
@@ -48,6 +51,12 @@ class GameState extends ChangeNotifier {
   /// Установить сложность AI
   void setAIDifficulty(AIDifficulty difficulty) {
     _aiPlayer = AIPlayer(difficulty: difficulty);
+    notifyListeners();
+  }
+
+  /// Установить тему доски
+  void setBoardTheme(BoardTheme theme) {
+    _boardTheme = theme;
     notifyListeners();
   }
 
@@ -75,7 +84,7 @@ class GameState extends ChangeNotifier {
     await Future.delayed(const Duration(milliseconds: 100));
 
     List<Cell> flippedCells = _board.makeMove(row, col);
-    
+
     _isProcessing = false;
     notifyListeners();
 
@@ -87,8 +96,8 @@ class GameState extends ChangeNotifier {
     }
 
     // Если играем против AI и сейчас ход белых (AI)
-    if (_gameMode == GameMode.vsAI && 
-        currentPlayer == Player.white && 
+    if (_gameMode == GameMode.vsAI &&
+        currentPlayer == Player.white &&
         !isGameOver) {
       await _makeAIMove();
     }
@@ -116,7 +125,7 @@ class GameState extends ChangeNotifier {
       if (!isGameOver && validMoves.isEmpty) {
         await Future.delayed(const Duration(milliseconds: 500));
         skipTurn();
-        
+
         // Если после пропуска хода снова ход AI, делаем еще один ход
         if (currentPlayer == Player.white && !isGameOver) {
           await _makeAIMove();

@@ -1,16 +1,37 @@
 import 'package:flutter/material.dart';
 import '../models/game_state.dart';
 import '../utils/constants.dart';
+import '../utils/board_theme.dart';
 import 'game_screen.dart';
+import 'settings_screen.dart';
 
 /// Главный экран с меню
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  BoardTheme _selectedTheme = BoardTheme.classic;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: GameConstants.backgroundColor,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          // Кнопка настроек
+          IconButton(
+            icon: const Icon(Icons.settings, color: Colors.white),
+            onPressed: () => _showSettings(context),
+            tooltip: 'Settings',
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -99,11 +120,11 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildMenuButton(
-    BuildContext context, {
-    required String label,
-    required IconData icon,
-    required VoidCallback onPressed,
-  }) {
+      BuildContext context, {
+        required String label,
+        required IconData icon,
+        required VoidCallback onPressed,
+      }) {
     return SizedBox(
       width: double.infinity,
       height: 60,
@@ -136,7 +157,27 @@ class HomeScreen extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => GameScreen(gameMode: mode),
+        builder: (context) => GameScreen(
+          gameMode: mode,
+          initialTheme: _selectedTheme,
+        ),
+      ),
+    );
+  }
+
+  void _showSettings(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SettingsScreen(
+          currentTheme: _selectedTheme,
+          onThemeChanged: (theme) {
+            setState(() {
+              _selectedTheme = theme;
+            });
+            Navigator.pop(context);
+          },
+        ),
       ),
     );
   }
@@ -157,11 +198,11 @@ class HomeScreen extends StatelessWidget {
             children: const [
               Text(
                 '1. Players take turns placing pieces\n\n'
-                '2. Trap opponent\'s pieces between yours\n\n'
-                '3. Trapped pieces flip to your color\n\n'
-                '4. You must flip at least one piece per turn\n\n'
-                '5. If you can\'t move, turn is skipped\n\n'
-                '6. Most pieces at the end wins!',
+                    '2. Trap opponent\'s pieces between yours\n\n'
+                    '3. Trapped pieces flip to your color\n\n'
+                    '4. You must flip at least one piece per turn\n\n'
+                    '5. If you can\'t move, turn is skipped\n\n'
+                    '6. Most pieces at the end wins!',
                 style: TextStyle(color: Colors.white70, fontSize: 14),
               ),
             ],

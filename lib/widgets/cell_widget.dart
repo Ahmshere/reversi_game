@@ -6,14 +6,20 @@ import '../utils/constants.dart';
 /// Виджет клетки игрового поля
 class CellWidget extends StatefulWidget {
   final Cell cell;
-  final bool isValidMove;
+  final bool isValidMove;  // Для кликабельности
+  final bool showHint;     // Для отображения подсказки
   final VoidCallback? onTap;
+  final Color boardColor;
+  final Color gridLineColor;
 
   const CellWidget({
     Key? key,
     required this.cell,
     this.isValidMove = false,
+    this.showHint = false,
     this.onTap,
+    this.boardColor = GameConstants.boardColor,
+    this.gridLineColor = GameConstants.gridLineColor,
   }) : super(key: key);
 
   @override
@@ -82,21 +88,21 @@ class _CellWidgetState extends State<CellWidget>
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: widget.isValidMove ? widget.onTap : null,
+      onTap: widget.isValidMove ? widget.onTap : null,  // Кликабельность на основе isValidMove
       child: Container(
         margin: const EdgeInsets.all(GameConstants.cellPadding),
         decoration: BoxDecoration(
-          color: GameConstants.boardColor,
+          color: widget.boardColor,
           borderRadius: BorderRadius.circular(GameConstants.borderRadius),
           border: Border.all(
-            color: GameConstants.gridLineColor,
+            color: widget.gridLineColor,
             width: 1,
           ),
         ),
         child: Stack(
           children: [
-            // Индикатор валидного хода с пульсацией
-            if (widget.isValidMove)
+            // Индикатор валидного хода с пульсацией - показываем только если showHint == true
+            if (widget.showHint)
               Center(
                 child: TweenAnimationBuilder<double>(
                   tween: Tween(begin: 0.6, end: 1.0),
@@ -127,7 +133,7 @@ class _CellWidgetState extends State<CellWidget>
                   },
                   onEnd: () {
                     // Перезапуск анимации (пульсация)
-                    if (mounted && widget.isValidMove) {
+                    if (mounted && widget.showHint) {
                       setState(() {});
                     }
                   },

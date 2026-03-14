@@ -2,22 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/game_state.dart';
 import '../utils/constants.dart';
+import '../utils/board_theme.dart';
 import '../widgets/board_widget.dart';
 import '../widgets/score_widget.dart';
+import 'settings_screen.dart';
 
 /// Экран игры
 class GameScreen extends StatelessWidget {
   final GameMode gameMode;
+  final BoardTheme initialTheme;
 
   const GameScreen({
     Key? key,
     required this.gameMode,
+    this.initialTheme = BoardTheme.classic,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => GameState()..setGameMode(gameMode),
+      create: (_) => GameState()
+        ..setGameMode(gameMode)
+        ..setBoardTheme(initialTheme),
       child: const _GameScreenContent(),
     );
   }
@@ -60,6 +66,15 @@ class _GameScreenContent extends StatelessWidget {
               );
             },
           ),
+          Consumer<GameState>(
+            builder: (context, gameState, _) {
+              return IconButton(
+                icon: const Icon(Icons.settings, color: Colors.white),
+                onPressed: () => _showSettings(context, gameState),
+                tooltip: 'Settings',
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: () => _showNewGameDialog(context),
@@ -77,44 +92,67 @@ class _GameScreenContent extends StatelessWidget {
               });
             }
 
-            return Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  // Счет
-                  ScoreWidget(
-                    blackScore: gameState.blackScore,
-                    whiteScore: gameState.whiteScore,
-                    currentPlayer: gameState.currentPlayer,
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Текущий игрок
-                  _buildCurrentPlayerIndicator(gameState),
-                  const SizedBox(height: 20),
-
-                  // Доска
-                  Expanded(
-                    child: Center(
-                      child: AspectRatio(
-                        aspectRatio: 1.0,
-                        child: BoardWidget(
-                          board: gameState.board,
-                          validMoves: gameState.validMoves,
-                          showValidMoves: gameState.showValidMoves,
-                          onCellTap: (row, col) =>
-                              _handleCellTap(context, gameState, row, col),
+            return Column(
+              children: [
+                // Основной контент игры
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        // Счет
+                        ScoreWidget(
+                          blackScore: gameState.blackScore,
+                          whiteScore: gameState.whiteScore,
+                          currentPlayer: gameState.currentPlayer,
                         ),
+                        const SizedBox(height: 16),
+
+                        // Текущий игрок
+                        _buildCurrentPlayerIndicator(gameState),
+                        const SizedBox(height: 16),
+
+                        // Доска - занимает доступное пространство
+                        Expanded(
+                          child: Center(
+                            child: AspectRatio(
+                              aspectRatio: 1.0,
+                              child: BoardWidget(
+                                board: gameState.board,
+                                validMoves: gameState.validMoves,
+                                showValidMoves: gameState.showValidMoves,
+                                onCellTap: (row, col) =>
+                                    _handleCellTap(context, gameState, row, col),
+                                boardTheme: gameState.boardTheme,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Информация о ходах
+                        if (gameState.validMoves.isEmpty && !gameState.isGameOver)
+                          _buildNoMovesWarning(gameState),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // МЕСТО ДЛЯ РЕКЛАМНОГО БАННЕРА (60px)
+                Container(
+                  height: 60,
+                  color: Colors.black.withOpacity(0.3),
+                  child: Center(
+                    child: Text(
+                      'AD BANNER PLACEHOLDER',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.5),
+                        fontSize: 12,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
-
-                  // Информация о ходах
-                  if (gameState.validMoves.isEmpty && !gameState.isGameOver)
-                    _buildNoMovesWarning(gameState),
-                ],
-              ),
+                ),
+              ],
             );
           },
         ),
@@ -193,6 +231,21 @@ class _GameScreenContent extends StatelessWidget {
     }
 
     gameState.makeMove(row, col);
+  }
+
+  void _showSettings(BuildContext context, GameState gameState) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SettingsScreen(
+          currentTheme: gameState.boardTheme,
+          onThemeChanged: (theme) {
+            gameState.setBoardTheme(theme);
+            Navigator.pop(context);
+          },
+        ),
+      ),
+    );
   }
 
   void _showNewGameDialog(BuildContext context) {

@@ -32,7 +32,7 @@ class GameConstants {
   static const double borderRadius = 4.0;
   
   // Анимации
-  static const Duration flipDuration = Duration(milliseconds: 300);
+  static const Duration flipDuration = Duration(milliseconds: 500);
   static const Duration placeDuration = Duration(milliseconds: 200);
   
   // Текстовые стили
