@@ -68,6 +68,7 @@ class BoardWidget extends StatelessWidget {
               onTap: () => onCellTap(row, col),
               boardColor: themeData.boardColor,
               gridLineColor: themeData.gridLineColor,
+              hintColor: themeData.hintColor, // ← Цвет подсказки из темы
             );
           },
         ),

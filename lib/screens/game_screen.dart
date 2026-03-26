@@ -12,12 +12,14 @@ class GameScreen extends StatelessWidget {
   final GameMode gameMode;
   final BoardTheme initialTheme;
   final AppLanguage initialLanguage;
+  final Function(AppLanguage)? onLanguageChanged;
 
   const GameScreen({
     Key? key,
     required this.gameMode,
     this.initialTheme = BoardTheme.classic,
     this.initialLanguage = AppLanguage.english,
+    this.onLanguageChanged,
   }) : super(key: key);
 
   @override
@@ -27,13 +29,15 @@ class GameScreen extends StatelessWidget {
         ..setGameMode(gameMode)
         ..setBoardTheme(initialTheme)
         ..setLanguage(initialLanguage),
-      child: const _GameScreenContent(),
+      child: _GameScreenContent(onLanguageChanged: onLanguageChanged),
     );
   }
 }
 
 class _GameScreenContent extends StatelessWidget {
-  const _GameScreenContent({Key? key}) : super(key: key);
+  final Function(AppLanguage)? onLanguageChanged;
+
+  const _GameScreenContent({Key? key, this.onLanguageChanged}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -247,7 +251,10 @@ class _GameScreenContent extends StatelessWidget {
           soundEnabled: gameState.soundEnabled,
           onToggleSound: gameState.toggleSound,
           currentLanguage: gameState.language,
-          onLanguageChanged: gameState.setLanguage,
+          onLanguageChanged: (lang) {
+            gameState.setLanguage(lang);
+            onLanguageChanged?.call(lang);
+          },
           onThemeChanged: (theme) {
             gameState.setBoardTheme(theme);
             Navigator.pop(context);
