@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import '../models/game_state.dart';
 import '../utils/constants.dart';
 import '../utils/board_theme.dart';
@@ -15,6 +16,8 @@ import 'tutorial_screen.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 class _FloatingPiece {
   double x, y, size, speed, angle, rotationSpeed, opacity;
+  // Дополнительные осцилляторы с иррациональными частотами — движение не повторяется
+  double speed2, angle2, speedX, angleX;
   bool isBlack;
 
   _FloatingPiece({
@@ -25,6 +28,10 @@ class _FloatingPiece {
     required this.angle,
     required this.rotationSpeed,
     required this.opacity,
+    required this.speed2,
+    required this.angle2,
+    required this.speedX,
+    required this.angleX,
     required this.isBlack,
   });
 }
@@ -61,8 +68,15 @@ class _BackgroundPainter extends CustomPainter {
         80, const Color(0xFF2980B9), 0.05);
 
     for (final p in pieces) {
-      final px = p.x * size.width;
-      final py = (p.y + math.sin(time * p.speed + p.angle) * 0.03) * size.height;
+      // Два синуса по Y с иррациональным соотношением частот (√2, √3)
+      // → суперпозиция никогда не повторяется
+      final dy = math.sin(time * p.speed + p.angle) * 0.028
+          + math.sin(time * p.speed2 + p.angle2) * 0.016;
+      // Лёгкий горизонтальный дрейф
+      final dx = math.sin(time * p.speedX + p.angleX) * 0.012
+          + math.cos(time * p.speed * 0.7071 + p.angle) * 0.008;
+      final px = (p.x + dx) * size.width;
+      final py = (p.y + dy) * size.height;
       final r = p.size;
 
       canvas.save();
@@ -132,7 +146,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final AudioService _audio = AudioService();
   AppLanguage _language = AppLanguage.english;
 
-  late AnimationController _bgController;
+  // Ticker накапливает время монотонно — никогда не сбрасывается, нет рывков
+  late Ticker _ticker;
+  double _time = 0.0;
+
   late AnimationController _entranceController;
   late Animation<double> _titleAnim;
   late Animation<double> _card1Anim;
@@ -147,10 +164,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
 
-    _bgController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 8),
-    )..repeat();
+    // Ticker вызывается каждый кадр, elapsed всегда растёт
+    _ticker = createTicker((elapsed) {
+      setState(() {
+        _time = elapsed.inMilliseconds / 1000.0;
+      });
+    })..start();
 
     _entranceController = AnimationController(
       vsync: this,
@@ -179,21 +198,30 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   List<_FloatingPiece> _generatePieces() {
     final rng = math.Random(42);
-    return List.generate(14, (i) => _FloatingPiece(
-      x: rng.nextDouble(),
-      y: rng.nextDouble(),
-      size: 8 + rng.nextDouble() * 18,
-      speed: 0.3 + rng.nextDouble() * 0.5,
-      angle: rng.nextDouble() * math.pi * 2,
-      rotationSpeed: (rng.nextDouble() - 0.5) * 0.4,
-      opacity: 0.06 + rng.nextDouble() * 0.1,
-      isBlack: i.isEven,
-    ));
+    return List.generate(14, (i) {
+      final baseSpeed = 0.25 + rng.nextDouble() * 0.45;
+      return _FloatingPiece(
+        x: rng.nextDouble(),
+        y: rng.nextDouble(),
+        size: 8 + rng.nextDouble() * 18,
+        speed: baseSpeed,
+        angle: rng.nextDouble() * math.pi * 2,
+        // √2 ≈ 1.4142 — иррационально к 1, суперпозиция не повторяется
+        speed2: baseSpeed * (1.4142 + rng.nextDouble() * 0.3),
+        angle2: rng.nextDouble() * math.pi * 2,
+        // √3 ≈ 1.7320 — третья несоизмеримая частота для X
+        speedX: baseSpeed * (1.7320 + rng.nextDouble() * 0.25),
+        angleX: rng.nextDouble() * math.pi * 2,
+        rotationSpeed: (rng.nextDouble() - 0.5) * 0.35,
+        opacity: 0.06 + rng.nextDouble() * 0.1,
+        isBlack: i.isEven,
+      );
+    });
   }
 
   @override
   void dispose() {
-    _bgController.dispose();
+    _ticker.dispose();
     _entranceController.dispose();
     super.dispose();
   }
@@ -208,16 +236,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       body: Stack(
         children: [
           // Анимированный фон
-          AnimatedBuilder(
-            animation: _bgController,
-            builder: (_, __) => SizedBox.expand(
-              child: CustomPaint(
-                painter: _BackgroundPainter(
-                  pieces: _pieces,
-                  time: _bgController.value * math.pi * 2,
-                ),
-              ),
+          CustomPaint(
+            painter: _BackgroundPainter(
+              pieces: _pieces,
+              time: _time,
             ),
+            child: const SizedBox.expand(),
           ),
 
           // UI контент
@@ -355,37 +379,32 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   // ── Логотип с анимированными фишками ──────────────────────────────────────
   Widget _buildLogoArea() {
-    return AnimatedBuilder(
-      animation: _bgController,
-      builder: (_, __) {
-        final t = _bgController.value * math.pi * 2;
-        return SizedBox(
-          height: 110,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Светящийся ореол
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF27AE60)
-                          .withOpacity(0.12 + 0.06 * math.sin(t)),
-                      blurRadius: 50,
-                      spreadRadius: 15,
-                    ),
-                  ],
+    final t = _time;
+    return SizedBox(
+      height: 110,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Светящийся ореол
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF27AE60)
+                      .withOpacity(0.12 + 0.06 * math.sin(t * 0.8)),
+                  blurRadius: 50,
+                  spreadRadius: 15,
                 ),
-              ),
-              // Четыре фишки паттерн 2x2
-              ..._buildBoardPieces(t),
-            ],
+              ],
+            ),
           ),
-        );
-      },
+          // Четыре фишки паттерн 2x2
+          ..._buildBoardPieces(t),
+        ],
+      ),
     );
   }
 
