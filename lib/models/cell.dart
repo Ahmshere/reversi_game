@@ -1,31 +1,42 @@
 import '../utils/constants.dart';
 
+/// Тип модификатора клетки (активен только в режиме Хаос)
+enum CellType {
+  normal,    // Обычная клетка
+  blocked,   // 🚫 Заблокирована — нельзя ставить фишку
+  explosive, // 💥 Взрывная — переворачивает всех 8 соседей при захвате
+  bonus,     // ⭐ Бонус — даёт дополнительный ход текущему игроку
+}
+
 /// Модель клетки на игровой доске
 class Cell {
   final int row;
   final int col;
   Player player;
+  CellType cellType;
+  bool isTrapdoorFalling; // временный флаг для анимации провала
 
   Cell({
     required this.row,
     required this.col,
     this.player = Player.none,
+    this.cellType = CellType.normal,
+    this.isTrapdoorFalling = false,
   });
 
-  /// Проверка, пустая ли клетка
   bool get isEmpty => player == Player.none;
 
-  /// Копирование клетки с возможностью изменения игрока
-  Cell copyWith({Player? player}) {
+  Cell copyWith({Player? player, CellType? cellType}) {
     return Cell(
       row: row,
       col: col,
       player: player ?? this.player,
+      cellType: cellType ?? this.cellType,
     );
   }
 
   @override
-  String toString() => 'Cell($row, $col, $player)';
+  String toString() => 'Cell($row, $col, $player, $cellType)';
 
   @override
   bool operator ==(Object other) =>

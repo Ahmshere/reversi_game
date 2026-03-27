@@ -12,6 +12,7 @@ class GameScreen extends StatelessWidget {
   final GameMode gameMode;
   final BoardTheme initialTheme;
   final AppLanguage initialLanguage;
+  final bool isModifierMode;
   final Function(AppLanguage)? onLanguageChanged;
 
   const GameScreen({
@@ -19,6 +20,7 @@ class GameScreen extends StatelessWidget {
     required this.gameMode,
     this.initialTheme = BoardTheme.classic,
     this.initialLanguage = AppLanguage.english,
+    this.isModifierMode = false,
     this.onLanguageChanged,
   }) : super(key: key);
 
@@ -28,7 +30,8 @@ class GameScreen extends StatelessWidget {
       create: (_) => GameState()
         ..setGameMode(gameMode)
         ..setBoardTheme(initialTheme)
-        ..setLanguage(initialLanguage),
+        ..setLanguage(initialLanguage)
+        ..setModifierMode(isModifierMode),
       child: _GameScreenContent(onLanguageChanged: onLanguageChanged),
     );
   }
@@ -148,6 +151,14 @@ class _GameScreenContent extends StatelessWidget {
                                     ? _buildNoMovesWarning(loc)
                                     : const SizedBox.shrink(),
                               ),
+                              // Баннер сработавшего модификатора (Chaos Mode)
+                              AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 300),
+                                child: gameState.showModifierBanner
+                                    ? _buildModifierBanner(
+                                    gameState.modifierBannerText)
+                                    : const SizedBox.shrink(),
+                              ),
                             ],
                           ),
                         ),
@@ -228,6 +239,34 @@ class _GameScreenContent extends StatelessWidget {
             child: Text(
               loc.noValidMoves,
               style: TextStyle(color: Colors.orange.shade100, fontSize: 14),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModifierBanner(String text) {
+    return Container(
+      key: ValueKey(text),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.deepPurple.withOpacity(0.25),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.deepPurpleAccent, width: 1.5),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.auto_awesome, color: Colors.deepPurpleAccent),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],

@@ -8,6 +8,7 @@ import '../utils/audio_service.dart';
 import '../utils/app_localizations.dart';
 import '../version.dart';
 import 'game_screen.dart';
+import 'mode_select_screen.dart';
 import 'settings_screen.dart';
 import 'tutorial_screen.dart';
 
@@ -169,12 +170,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       setState(() {
         _time = elapsed.inMilliseconds / 1000.0;
       });
-    })..start();
+    })
+      ..start();
 
     _entranceController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
-    )..forward();
+    )
+      ..forward();
 
     _titleAnim = CurvedAnimation(
       parent: _entranceController,
@@ -229,7 +232,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final loc = _loc;
-    final size = MediaQuery.of(context).size;
+    final size = MediaQuery
+        .of(context)
+        .size;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D1B2A),
@@ -310,7 +315,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 colors: [Color(0xFF1DB954), Color(0xFF0D7A3A)],
                               ),
                               glowColor: const Color(0xFF1DB954),
-                              onPressed: () => _startGame(context, GameMode.vsPlayer),
+                              onPressed: () =>
+                                  _startGame(context, GameMode.vsPlayer),
                             ),
                           ),
                         ),
@@ -334,9 +340,51 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 colors: [Color(0xFF7C6CF2), Color(0xFF4A38CC)],
                               ),
                               glowColor: const Color(0xFF7C6CF2),
-                              onPressed: () => _startGame(context, GameMode.vsAI),
+                              onPressed: () =>
+                                  _startGame(context, GameMode.vsAI),
                             ),
                           ),
+                        ),
+
+                        SizedBox(height: size.height * 0.022),
+
+                        // CHAOS MODE — разделитель
+                        FadeTransition(
+                          opacity: _bottomAnim,
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Divider(
+                                    color: Colors.white.withOpacity(0.1),
+                                    thickness: 0.5),
+                              ),
+                              Padding(
+                                padding:
+                                const EdgeInsets.symmetric(horizontal: 12),
+                                child: Text(
+                                  'ИЛИ',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.3),
+                                    fontSize: 11,
+                                    letterSpacing: 2,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: Divider(
+                                    color: Colors.white.withOpacity(0.1),
+                                    thickness: 0.5),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        SizedBox(height: size.height * 0.022),
+
+                        // CHAOS MODE кнопка
+                        FadeTransition(
+                          opacity: _bottomAnim,
+                          child: _buildChaosButton(context),
                         ),
 
                         SizedBox(height: size.height * 0.045),
@@ -415,9 +463,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     final configs = [
       (dx: -gap, dy: -gap, isBlack: false),
-      (dx: gap,  dy: -gap, isBlack: true),
-      (dx: -gap, dy: gap,  isBlack: true),
-      (dx: gap,  dy: gap,  isBlack: false),
+      (dx: gap, dy: -gap, isBlack: true),
+      (dx: -gap, dy: gap, isBlack: true),
+      (dx: gap, dy: gap, isBlack: false),
     ];
 
     return configs.map((c) {
@@ -468,10 +516,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return Column(
       children: [
         ShaderMask(
-          shaderCallback: (bounds) => const LinearGradient(
-            colors: [Color(0xFF56E39F), Color(0xFF27AE60), Color(0xFF5DADE2)],
-            stops: [0.0, 0.5, 1.0],
-          ).createShader(bounds),
+          shaderCallback: (bounds) =>
+              const LinearGradient(
+                colors: [
+                  Color(0xFF56E39F),
+                  Color(0xFF27AE60),
+                  Color(0xFF5DADE2)
+                ],
+                stops: [0.0, 0.5, 1.0],
+              ).createShader(bounds),
           child: Text(
             loc.appTitle,
             style: const TextStyle(
@@ -612,20 +665,111 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── Навигация ─────────────────────────────────────────────────────────────
+  // ── Навигация (классический режим) ───────────────────────────────────────
   void _startGame(BuildContext context, GameMode mode) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => GameScreen(
-          gameMode: mode,
-          initialTheme: _selectedTheme,
-          initialLanguage: _language,
-          onLanguageChanged: (lang) => setState(() => _language = lang),
+        builder: (_) =>
+            GameScreen(
+              gameMode: mode,
+              initialTheme: _selectedTheme,
+              initialLanguage: _language,
+              isModifierMode: false,
+              onLanguageChanged: (lang) => setState(() => _language = lang),
+            ),
+      ),
+    );
+  }
+
+  // ── Кнопка CHAOS MODE ────────────────────────────────────────────────────
+  Widget _buildChaosButton(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 58,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: const Color(0xFFFF1744).withOpacity(0.5),
+            width: 1.5,
+          ),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color(0xFFFF1744).withOpacity(0.15),
+              const Color(0xFFAA00FF).withOpacity(0.15),
+            ],
+          ),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () => _openChaosMode(context),
+            splashColor: const Color(0xFFFF1744).withOpacity(0.2),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 22),
+              child: Row(
+                children: [
+                  ShaderMask(
+                    shaderCallback: (b) =>
+                        const LinearGradient(
+                          colors: [Color(0xFFFF6B35), Color(0xFFAA00FF)],
+                        ).createShader(b),
+                    child: const Icon(Icons.local_fire_department_rounded,
+                        color: Colors.white, size: 22),
+                  ),
+                  const SizedBox(width: 14),
+                  ShaderMask(
+                    shaderCallback: (b) =>
+                        const LinearGradient(
+                          colors: [
+                            Color(0xFFFF6B35),
+                            Color(0xFFFF1744),
+                            Color(0xFFAA00FF)
+                          ],
+                        ).createShader(b),
+                    child: const Text(
+                      'CHAOS MODE',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(Icons.arrow_forward_ios_rounded,
+                      color: Colors.white.withOpacity(0.4), size: 14),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
+
+  // ── Навигация ─────────────────────────────────────────────────────────────
+  void _openChaosMode(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            ModeSelectScreen(
+              initialTheme: _selectedTheme,
+              initialLanguage: _language,
+              onLanguageChanged: (lang) => setState(() => _language = lang),
+            ),
+      ),
+    );
+  }
+
+
 
   void _showSettings(BuildContext context) {
     Navigator.push(

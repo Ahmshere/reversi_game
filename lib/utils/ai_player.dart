@@ -4,11 +4,7 @@ import '../models/cell.dart';
 import '../utils/constants.dart';
 
 /// Уровень сложности AI
-enum AIDifficulty {
-  easy,
-  medium,
-  hard,
-}
+enum AIDifficulty { easy, medium, hard }
 
 /// Простой AI противник для Reversi
 class AIPlayer {
@@ -17,15 +13,10 @@ class AIPlayer {
 
   AIPlayer({this.difficulty = AIDifficulty.medium});
 
-  /// Получить лучший ход для AI
   Future<Cell?> getBestMove(Board board) async {
-    // Задержка для более естественной игры
     await Future.delayed(Duration(milliseconds: 300 + _random.nextInt(500)));
-
     List<Cell> validMoves = board.getValidMoves();
-    if (validMoves.isEmpty) {
-      return null;
-    }
+    if (validMoves.isEmpty) return null;
 
     switch (difficulty) {
       case AIDifficulty.easy:
@@ -37,56 +28,41 @@ class AIPlayer {
     }
   }
 
-  /// Случайный ход (легкий уровень)
-  Cell _getRandomMove(List<Cell> validMoves) {
-    return validMoves[_random.nextInt(validMoves.length)];
-  }
+  Cell _getRandomMove(List<Cell> validMoves) =>
+      validMoves[_random.nextInt(validMoves.length)];
 
-  /// Жадный ход - выбирает ход, который переворачивает больше фишек (средний уровень)
   Cell _getGreedyMove(Board board, List<Cell> validMoves) {
     Cell? bestMove;
     int maxFlips = 0;
-
     for (Cell move in validMoves) {
-      // Создаем копию доски для тестирования
       Board testBoard = _copyBoard(board);
-      List<Cell> flippedCells = testBoard.makeMove(move.row, move.col);
-
-      if (flippedCells.length > maxFlips) {
-        maxFlips = flippedCells.length;
+      // В режиме Хаос модификаторы тоже учитываются в копии
+      MoveResult result = testBoard.makeMove(move.row, move.col);
+      final total = result.flippedCells.length + result.explosiveFlipped.length;
+      if (total > maxFlips) {
+        maxFlips = total;
         bestMove = move;
       }
     }
-
     return bestMove ?? validMoves[0];
   }
 
-  /// Стратегический ход - учитывает позиции (углы, края) (сложный уровень)
   Cell _getStrategicMove(Board board, List<Cell> validMoves) {
     Cell? bestMove;
     double bestScore = double.negativeInfinity;
-
     for (Cell move in validMoves) {
       double score = _evaluateMove(board, move);
-
       if (score > bestScore) {
         bestScore = score;
         bestMove = move;
       }
     }
-
     return bestMove ?? validMoves[0];
   }
 
-  /// Оценить качество хода
   double _evaluateMove(Board board, Cell move) {
     double score = 0;
-
-    // Весовая матрица позиций на доске
-    // Углы - лучшие позиции (+100)
-    // Края - хорошие позиции (+10)
-    // Позиции рядом с углами - плохие позиции (-20)
-    final List<List<int>> positionWeights = [
+    const positionWeights = [
       [100, -20, 10, 5, 5, 10, -20, 100],
       [-20, -40, -5, -5, -5, -5, -40, -20],
       [10, -5, 5, 2, 2, 5, -5, 10],
@@ -97,20 +73,23 @@ class AIPlayer {
       [100, -20, 10, 5, 5, 10, -20, 100],
     ];
 
-    // Базовая оценка - вес позиции
     score += positionWeights[move.row][move.col];
 
-    // Дополнительная оценка - количество переворачиваемых фишек
-    Board testBoard = _copyBoard(board);
-    List<Cell> flippedCells = testBoard.makeMove(move.row, move.col);
-    score += flippedCells.length * 5;
-
-    // Бонус за захват углов
-    if (_isCorner(move.row, move.col)) {
-      score += 50;
+    // Бонус за взрывные клетки — AI видит что ход выгоднее
+    if (board.getCell(move.row, move.col).cellType == CellType.explosive) {
+      score += 20;
+    }
+    // Штраф за бонусные клетки для противника — AI избегает
+    // (но сам AI хочет попасть на бонус тоже)
+    if (board.getCell(move.row, move.col).cellType == CellType.bonus) {
+      score += 15;
     }
 
-    // Бонус за захват краев
+    Board testBoard = _copyBoard(board);
+    MoveResult result = testBoard.makeMove(move.row, move.col);
+    score += (result.flippedCells.length + result.explosiveFlipped.length) * 5;
+
+    if (_isCorner(move.row, move.col)) score += 50;
     if (_isEdge(move.row, move.col) && !_isNextToCorner(move.row, move.col)) {
       score += 15;
     }
@@ -118,13 +97,11 @@ class AIPlayer {
     return score;
   }
 
-  /// Проверка, является ли позиция углом
   bool _isCorner(int row, int col) {
     return (row == 0 || row == GameConstants.boardSize - 1) &&
         (col == 0 || col == GameConstants.boardSize - 1);
   }
 
-  /// Проверка, является ли позиция краем
   bool _isEdge(int row, int col) {
     return row == 0 ||
         row == GameConstants.boardSize - 1 ||
@@ -132,37 +109,31 @@ class AIPlayer {
         col == GameConstants.boardSize - 1;
   }
 
-  /// Проверка, находится ли позиция рядом с углом
   bool _isNextToCorner(int row, int col) {
     final corners = [
       [0, 0], [0, GameConstants.boardSize - 1],
       [GameConstants.boardSize - 1, 0],
       [GameConstants.boardSize - 1, GameConstants.boardSize - 1],
     ];
-
     for (var corner in corners) {
       int dr = (row - corner[0]).abs();
       int dc = (col - corner[1]).abs();
-      if ((dr == 1 && dc == 0) ||
-          (dr == 0 && dc == 1) ||
-          (dr == 1 && dc == 1)) {
+      if ((dr == 1 && dc == 0) || (dr == 0 && dc == 1) || (dr == 1 && dc == 1)) {
         return true;
       }
     }
     return false;
   }
 
-  /// Создать копию доски для тестирования ходов
+  /// Создать полную копию доски (включая модификаторы клеток)
   Board _copyBoard(Board original) {
     Board copy = Board();
-    
-    // Копируем состояние каждой клетки
     for (int row = 0; row < GameConstants.boardSize; row++) {
       for (int col = 0; col < GameConstants.boardSize; col++) {
         copy.cells[row][col].player = original.cells[row][col].player;
+        copy.cells[row][col].cellType = original.cells[row][col].cellType;
       }
     }
-    
     copy.currentPlayer = original.currentPlayer;
     return copy;
   }

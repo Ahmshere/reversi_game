@@ -1,6 +1,19 @@
 import 'cell.dart';
 import '../utils/constants.dart';
 
+/// Результат хода — содержит перевёрнутые клетки и сработавший модификатор
+class MoveResult {
+  final List<Cell> flippedCells;
+  final CellType? modifierTriggered;
+  final List<Cell> explosiveFlipped; // дополнительно перевёрнутые взрывом
+
+  const MoveResult({
+    required this.flippedCells,
+    this.modifierTriggered,
+    this.explosiveFlipped = const [],
+  });
+}
+
 /// Класс игровой доски с логикой Reversi
 class Board {
   late List<List<Cell>> cells;
@@ -10,7 +23,6 @@ class Board {
     _initializeBoard();
   }
 
-  /// Инициализация доски - создание начальной позиции
   void _initializeBoard() {
     cells = List.generate(
       GameConstants.boardSize,
@@ -20,7 +32,6 @@ class Board {
       ),
     );
 
-    // Начальная позиция (4 фишки в центре)
     final center = GameConstants.boardSize ~/ 2;
     cells[center - 1][center - 1].player = Player.white;
     cells[center - 1][center].player = Player.black;
@@ -28,21 +39,17 @@ class Board {
     cells[center][center].player = Player.white;
   }
 
-  /// Получить клетку по координатам
-  Cell getCell(int row, int col) {
-    return cells[row][col];
-  }
+  Cell getCell(int row, int col) => cells[row][col];
 
-  /// Проверка валидности хода
+  /// Проверка валидности хода (учитывает заблокированные клетки)
   bool isValidMove(int row, int col) {
-    if (!_isInBounds(row, col) || !cells[row][col].isEmpty) {
-      return false;
-    }
-
+    if (!_isInBounds(row, col)) return false;
+    final cell = cells[row][col];
+    if (!cell.isEmpty) return false;
+    if (cell.cellType == CellType.blocked) return false;
     return _getFlippedCells(row, col, currentPlayer).isNotEmpty;
   }
 
-  /// Получить список всех валидных ходов для текущего игрока
   List<Cell> getValidMoves() {
     List<Cell> validMoves = [];
     for (int row = 0; row < GameConstants.boardSize; row++) {
@@ -55,159 +62,196 @@ class Board {
     return validMoves;
   }
 
-  /// Сделать ход
-  List<Cell> makeMove(int row, int col) {
+  /// Сделать ход — возвращает MoveResult с информацией о сработавших модификаторах
+  MoveResult makeMove(int row, int col) {
     if (!isValidMove(row, col)) {
-      return [];
+      return const MoveResult(flippedCells: []);
     }
 
-    // Получаем клетки для переворота
     List<Cell> cellsToFlip = _getFlippedCells(row, col, currentPlayer);
+    final triggeredModifier = cells[row][col].cellType;
 
-    // Ставим фишку
+    // Ставим фишку, сбрасываем модификатор клетки
     cells[row][col].player = currentPlayer;
+    cells[row][col].cellType = CellType.normal;
 
     // Переворачиваем захваченные фишки
     for (Cell cell in cellsToFlip) {
       cells[cell.row][cell.col].player = currentPlayer;
     }
-
-    // Добавляем поставленную фишку в список перевернутых (для анимации)
     cellsToFlip.add(cells[row][col]);
 
-    // Переключаем игрока
-    _switchPlayer();
+    // ── Обработка модификаторов ──────────────────────────────────────────────
+    List<Cell> explosiveFlipped = [];
 
-    return cellsToFlip;
-  }
-
-  /// Получить клетки, которые будут перевернуты при ходе
-  List<Cell> _getFlippedCells(int row, int col, Player player) {
-    List<Cell> flippedCells = [];
-
-    // 8 направлений: вверх, вниз, влево, вправо и 4 диагонали
-    final directions = [
-      [-1, 0], // вверх
-      [1, 0], // вниз
-      [0, -1], // влево
-      [0, 1], // вправо
-      [-1, -1], // вверх-влево
-      [-1, 1], // вверх-вправо
-      [1, -1], // вниз-влево
-      [1, 1], // вниз-вправо
-    ];
-
-    for (var dir in directions) {
-      List<Cell> cellsInDirection = _checkDirection(row, col, dir[0], dir[1], player);
-      flippedCells.addAll(cellsInDirection);
+    if (triggeredModifier == CellType.explosive) {
+      // Взрыв: переворачиваем всех 8 соседей у которых есть фишки
+      for (final dir in _directions) {
+        final nr = row + dir[0];
+        final nc = col + dir[1];
+        if (_isInBounds(nr, nc) &&
+            !cells[nr][nc].isEmpty &&
+            cells[nr][nc].cellType != CellType.blocked) {
+          cells[nr][nc].player = currentPlayer;
+          explosiveFlipped.add(cells[nr][nc]);
+        }
+      }
     }
 
+    // Trapdoor: если фишка поставлена на клетку с люком — она исчезает
+    // (обрабатывается в GameState через triggerTrapdoorEvent)
+
+    // Бонус и заблокированные обрабатываются в GameState
+
+    _switchPlayer();
+
+    return MoveResult(
+      flippedCells: cellsToFlip,
+      modifierTriggered: triggeredModifier == CellType.normal
+          ? null
+          : triggeredModifier,
+      explosiveFlipped: explosiveFlipped,
+    );
+  }
+
+  // ── Helpers для режима Хаос ──────────────────────────────────────────────
+
+  /// Установить модификатор на клетку
+  void setModifier(int row, int col, CellType type) {
+    cells[row][col].cellType = type;
+  }
+
+  /// Пустые клетки, не являющиеся углами
+  List<Cell> getEmptyNonCornerCells() {
+    final result = <Cell>[];
+    for (int r = 0; r < GameConstants.boardSize; r++) {
+      for (int c = 0; c < GameConstants.boardSize; c++) {
+        if (cells[r][c].isEmpty &&
+            cells[r][c].cellType == CellType.normal &&
+            !_isCorner(r, c)) {
+          result.add(cells[r][c]);
+        }
+      }
+    }
+    return result;
+  }
+
+  /// Занятые клетки, не являющиеся углами
+  List<Cell> getOccupiedNonCornerCells() {
+    final result = <Cell>[];
+    for (int r = 0; r < GameConstants.boardSize; r++) {
+      for (int c = 0; c < GameConstants.boardSize; c++) {
+        if (!cells[r][c].isEmpty &&
+            cells[r][c].cellType == CellType.normal &&
+            !_isCorner(r, c)) {
+          result.add(cells[r][c]);
+        }
+      }
+    }
+    return result;
+  }
+
+  /// Количество активных модификаторов на доске
+  int get activeModifiersCount {
+    int count = 0;
+    for (int r = 0; r < GameConstants.boardSize; r++) {
+      for (int c = 0; c < GameConstants.boardSize; c++) {
+        if (cells[r][c].cellType != CellType.normal) count++;
+      }
+    }
+    return count;
+  }
+
+  // ── Приватные методы ─────────────────────────────────────────────────────
+
+  List<Cell> _getFlippedCells(int row, int col, Player player) {
+    List<Cell> flippedCells = [];
+    for (var dir in _directions) {
+      flippedCells.addAll(_checkDirection(row, col, dir[0], dir[1], player));
+    }
     return flippedCells;
   }
 
-  /// Проверка в одном направлении
-  List<Cell> _checkDirection(int row, int col, int dRow, int dCol, Player player) {
+  List<Cell> _checkDirection(
+      int row, int col, int dRow, int dCol, Player player) {
     List<Cell> cellsToFlip = [];
     int currentRow = row + dRow;
     int currentCol = col + dCol;
     Player opponent = _getOpponent(player);
 
-    // Идем в направлении, пока не найдем край доски или пустую клетку
     while (_isInBounds(currentRow, currentCol)) {
       Cell currentCell = cells[currentRow][currentCol];
 
-      if (currentCell.isEmpty) {
-        // Пустая клетка - не можем захватить
+      // Пустые или заблокированные клетки — нельзя захватить через них
+      if (currentCell.isEmpty || currentCell.cellType == CellType.blocked) {
         return [];
       } else if (currentCell.player == opponent) {
-        // Фишка противника - добавляем в список
         cellsToFlip.add(currentCell);
       } else {
-        // Наша фишка - возвращаем все клетки между
         return cellsToFlip;
       }
 
       currentRow += dRow;
       currentCol += dCol;
     }
-
-    // Достигли края доски - не можем захватить
     return [];
   }
 
-  /// Проверка, находится ли координата в пределах доски
-  bool _isInBounds(int row, int col) {
-    return row >= 0 &&
-        row < GameConstants.boardSize &&
-        col >= 0 &&
-        col < GameConstants.boardSize;
+  bool _isInBounds(int row, int col) =>
+      row >= 0 &&
+      row < GameConstants.boardSize &&
+      col >= 0 &&
+      col < GameConstants.boardSize;
+
+  bool _isCorner(int row, int col) {
+    final s = GameConstants.boardSize - 1;
+    return (row == 0 || row == s) && (col == 0 || col == s);
   }
 
-  /// Получить противника
-  Player _getOpponent(Player player) {
-    return player == Player.black ? Player.white : Player.black;
-  }
+  Player _getOpponent(Player player) =>
+      player == Player.black ? Player.white : Player.black;
 
-  /// Переключить игрока
   void _switchPlayer() {
     currentPlayer = _getOpponent(currentPlayer);
   }
 
-  /// Подсчет фишек для игрока
   int countPieces(Player player) {
     int count = 0;
     for (var row in cells) {
       for (var cell in row) {
-        if (cell.player == player) {
-          count++;
-        }
+        if (cell.player == player) count++;
       }
     }
     return count;
   }
 
-  /// Проверка окончания игры
   bool isGameOver() {
-    // Игра окончена, если нет валидных ходов для обоих игроков
-    if (getValidMoves().isNotEmpty) {
-      return false;
-    }
-
-    // Проверяем валидные ходы для противника
+    if (getValidMoves().isNotEmpty) return false;
     Player original = currentPlayer;
     _switchPlayer();
     bool opponentHasMoves = getValidMoves().isNotEmpty;
     currentPlayer = original;
-
     return !opponentHasMoves;
   }
 
-  /// Получить победителя (или null если ничья)
   Player? getWinner() {
-    if (!isGameOver()) {
-      return null;
-    }
-
+    if (!isGameOver()) return null;
     int blackCount = countPieces(Player.black);
     int whiteCount = countPieces(Player.white);
-
-    if (blackCount > whiteCount) {
-      return Player.black;
-    } else if (whiteCount > blackCount) {
-      return Player.white;
-    } else {
-      return Player.none; // Ничья
-    }
+    if (blackCount > whiteCount) return Player.black;
+    if (whiteCount > blackCount) return Player.white;
+    return Player.none;
   }
 
-  /// Пропустить ход (если нет валидных ходов)
-  void skipTurn() {
-    _switchPlayer();
-  }
+  void skipTurn() => _switchPlayer();
 
-  /// Сброс игры
   void reset() {
     _initializeBoard();
     currentPlayer = Player.black;
   }
+
+  static const List<List<int>> _directions = [
+    [-1, 0], [1, 0], [0, -1], [0, 1],
+    [-1, -1], [-1, 1], [1, -1], [1, 1],
+  ];
 }

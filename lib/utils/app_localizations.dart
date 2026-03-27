@@ -429,6 +429,60 @@ class AppLocalizations {
     zh: '广告横幅占位',
   );
 
+  // ── Chaos Mode ────────────────────────────────────────────────────────────
+
+  String get chaosModeTitle => _s(
+    en: 'CHAOS', ru: 'ХАОС', he: 'כאוס',
+    es: 'CAOS', fr: 'CHAOS', de: 'CHAOS', zh: '混乱',
+  );
+
+  String get chaosModeSubtitle => _s(
+    en: 'MODE', ru: 'РЕЖИМ', he: 'מצב',
+    es: 'MODO', fr: 'MODE', de: 'MODUS', zh: '模式',
+  );
+
+  String get chaosModeDesc => _s(
+    en: '🚫 Blocked cells · 💥 Explosive cells\n⭐ Bonus move · 🕳️ Collapsing floor',
+    ru: '🚫 Заблокированные · 💥 Взрывные\n⭐ Бонусный ход · 🕳️ Проваливающийся пол',
+    he: '🚫 חסומות · 💥 נפץ\n⭐ תור בונוס · 🕳️ רצפה קורסת',
+    es: '🚫 Bloqueadas · 💥 Explosivas\n⭐ Turno extra · 🕳️ Suelo que cede',
+    fr: '🚫 Bloquées · 💥 Explosives\n⭐ Tour bonus · 🕳️ Sol qui s\'effondre',
+    de: '🚫 Blockiert · 💥 Explosiv\n⭐ Bonuszug · 🕳️ Einstürzender Boden',
+    zh: '🚫 封闭格 · 💥 爆炸格\n⭐ 额外回合 · 🕳️ 塌陷地板',
+  );
+
+  // ── Модификатор-баннеры ───────────────────────────────────────────────────
+
+  String get modifierExplosion => _s(
+    en: '💥 Explosion! All neighbors flipped',
+    ru: '💥 Взрыв! Все соседи перевёрнуты',
+    he: '💥 פיצוץ! כל השכנים הפוכו',
+    es: '💥 ¡Explosión! Vecinos volteados',
+    fr: '💥 Explosion ! Voisins retournés',
+    de: '💥 Explosion! Alle Nachbarn umgedreht',
+    zh: '💥 爆炸！所有邻格翻转',
+  );
+
+  String get modifierBonus => _s(
+    en: '⭐ Bonus! Extra turn granted',
+    ru: '⭐ Бонус! Дополнительный ход',
+    he: '⭐ בונוס! תור נוסף',
+    es: '⭐ ¡Bono! Turno adicional',
+    fr: '⭐ Bonus ! Tour supplémentaire',
+    de: '⭐ Bonus! Zusätzlicher Zug',
+    zh: '⭐ 奖励！获得额外回合',
+  );
+
+  String get modifierTrapdoor => _s(
+    en: '🕳️ The floor collapsed!',
+    ru: '🕳️ Пол провалился!',
+    he: '🕳️ הרצפה קרסה!',
+    es: '🕳️ ¡El suelo cedió!',
+    fr: '🕳️ Le sol s\'est effondré !',
+    de: '🕳️ Der Boden brach ein!',
+    zh: '🕳️ 地板塌陷了！',
+  );
+
   // ── Туториал — навигация ──────────────────────────────────────────────────
 
   String get tutBack => _s(en:'Back', ru:'Назад', he:'חזרה', es:'Atrás', fr:'Retour', de:'Zurück', zh:'上一步');
