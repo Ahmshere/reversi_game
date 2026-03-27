@@ -127,7 +127,17 @@ class _GameScreenContent extends StatelessWidget {
                               ),
                               const SizedBox(height: 12),
                               _buildCurrentPlayerIndicator(gameState, loc),
-                              const SizedBox(height: 12),
+                              const SizedBox(height: 8),
+                              // Индикатор что ИИ думает
+                              AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 300),
+                                child: (gameState.isProcessing &&
+                                    gameState.gameMode == GameMode.vsAI &&
+                                    gameState.currentPlayer == Player.white)
+                                    ? _buildAIThinkingIndicator(loc)
+                                    : const SizedBox.shrink(),
+                              ),
+                              const SizedBox(height: 8),
                               Expanded(
                                 child: Center(
                                   child: AspectRatio(
@@ -139,6 +149,10 @@ class _GameScreenContent extends StatelessWidget {
                                       onCellTap: (row, col) => _handleCellTap(
                                           context, gameState, row, col),
                                       boardTheme: gameState.boardTheme,
+                                      lastAIMove: gameState.lastAIMove,
+                                      isAIThinking: gameState.isProcessing &&
+                                          gameState.currentPlayer == Player.white &&
+                                          gameState.gameMode == GameMode.vsAI,
                                     ),
                                   ),
                                 ),
@@ -215,6 +229,44 @@ class _GameScreenContent extends StatelessWidget {
             style: const TextStyle(
               color: Colors.white,
               fontSize: 17,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAIThinkingIndicator(loc) {
+    return Container(
+      key: const ValueKey('ai-thinking'),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF00E5FF).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFF00E5FF).withOpacity(0.4),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 14,
+            height: 14,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation(
+                const Color(0xFF00E5FF).withOpacity(0.8),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            loc.aiThinking,
+            style: const TextStyle(
+              color: Color(0xFF00E5FF),
+              fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
           ),

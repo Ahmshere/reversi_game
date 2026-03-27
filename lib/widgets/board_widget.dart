@@ -5,13 +5,14 @@ import '../utils/constants.dart';
 import '../utils/board_theme.dart';
 import 'cell_widget.dart';
 
-/// Виджет игровой доски
 class BoardWidget extends StatelessWidget {
   final Board board;
   final List<Cell> validMoves;
   final bool showValidMoves;
   final Function(int row, int col) onCellTap;
   final BoardTheme boardTheme;
+  final Cell? lastAIMove;   // ← клетка куда ходит / походил ИИ
+  final bool isAIThinking;  // ← ИИ думает — подсвечиваем мигающим контуром
 
   const BoardWidget({
     Key? key,
@@ -20,6 +21,8 @@ class BoardWidget extends StatelessWidget {
     required this.showValidMoves,
     required this.onCellTap,
     this.boardTheme = BoardTheme.classic,
+    this.lastAIMove,
+    this.isAIThinking = false,
   }) : super(key: key);
 
   @override
@@ -45,8 +48,6 @@ class BoardWidget extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: GameConstants.boardSize,
-            mainAxisSpacing: 0,
-            crossAxisSpacing: 0,
           ),
           itemCount: GameConstants.boardSize * GameConstants.boardSize,
           itemBuilder: (context, index) {
@@ -54,21 +55,25 @@ class BoardWidget extends StatelessWidget {
             final col = index % GameConstants.boardSize;
             final cell = board.getCell(row, col);
 
-            // Проверяем, является ли клетка валидным ходом
             final isValidMove = validMoves.any((c) => c.row == row && c.col == col);
-
-            // Показываем подсказку ТОЛЬКО если включены подсказки И это валидный ход
             final showHint = showValidMoves && isValidMove;
+
+            // Подсветка хода ИИ
+            final isAITarget = lastAIMove != null &&
+                lastAIMove!.row == row &&
+                lastAIMove!.col == col;
 
             return CellWidget(
               key: ValueKey('cell_${row}_$col'),
               cell: cell,
-              isValidMove: isValidMove,  // ← Кликабельность (всегда для валидных ходов)
-              showHint: showHint,         // ← Отображение подсказки (только когда включено)
+              isValidMove: isValidMove,
+              showHint: showHint,
               onTap: () => onCellTap(row, col),
               boardColor: themeData.boardColor,
               gridLineColor: themeData.gridLineColor,
-              hintColor: themeData.hintColor, // ← Цвет подсказки из темы
+              hintColor: themeData.hintColor,
+              isAITarget: isAITarget,
+              isAIThinking: isAIThinking && isAITarget,
             );
           },
         ),

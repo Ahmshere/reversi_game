@@ -14,7 +14,7 @@ class AIPlayer {
   AIPlayer({this.difficulty = AIDifficulty.medium});
 
   Future<Cell?> getBestMove(Board board) async {
-    await Future.delayed(Duration(milliseconds: 300 + _random.nextInt(500)));
+    await Future.delayed(Duration(milliseconds: 1200 + _random.nextInt(600)));
     List<Cell> validMoves = board.getValidMoves();
     if (validMoves.isEmpty) return null;
 

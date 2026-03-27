@@ -23,9 +23,13 @@ class GameState extends ChangeNotifier {
 
   // ── Режим Хаос ────────────────────────────────────────────────────────────
   bool _isModifierMode = false;
-  int _totalMoveCount = 0; // суммарно ходов в текущей игре (оба игрока)
-  bool _extraTurn = false; // бонусная клетка: текущий игрок ходит ещё раз
-  Cell? _lastTrapdoorCell; // клетка, которая сейчас "проваливается"
+  int _totalMoveCount = 0;
+  bool _extraTurn = false;
+  Cell? _lastTrapdoorCell;
+
+  // Последний ход ИИ — подсвечивается на доске
+  Cell? _lastAIMove;
+  Cell? get lastAIMove => _lastAIMove;
 
   // Показывать баннер о сработавшем модификаторе
   String? _modifierBannerText;
@@ -135,7 +139,7 @@ class GameState extends ChangeNotifier {
       case CellType.explosive:
         _showModifierBanner(loc.modifierExplosion);
         notifyListeners();
-        await Future.delayed(const Duration(milliseconds: 1200));
+        await Future.delayed(const Duration(milliseconds: 2000));
         _modifierBannerText = null;
         notifyListeners();
         break;
@@ -143,7 +147,7 @@ class GameState extends ChangeNotifier {
         _extraTurn = true;
         _showModifierBanner(loc.modifierBonus);
         notifyListeners();
-        await Future.delayed(const Duration(milliseconds: 1000));
+        await Future.delayed(const Duration(milliseconds: 1800));
         _modifierBannerText = null;
         notifyListeners();
         break;
@@ -178,7 +182,7 @@ class GameState extends ChangeNotifier {
     _showModifierBanner(loc.modifierTrapdoor);
     notifyListeners();
 
-    await Future.delayed(const Duration(milliseconds: 900));
+    await Future.delayed(const Duration(milliseconds: 1800));
 
     // Убираем фишку, клетка становится обычной пустой
     target.player = Player.none;
@@ -228,6 +232,11 @@ class GameState extends ChangeNotifier {
     Cell? aiMove = await _aiPlayer.getBestMove(_board);
 
     if (aiMove != null) {
+      // Подсвечиваем куда ходит ИИ — показываем 800ms до хода
+      _lastAIMove = aiMove;
+      notifyListeners();
+      await Future.delayed(const Duration(milliseconds: 800));
+
       final result = _board.makeMove(aiMove.row, aiMove.col);
       notifyListeners();
       _audio.playMove();
@@ -266,6 +275,7 @@ class GameState extends ChangeNotifier {
       if (isGameOver) _playGameOverSound();
     }
 
+    _lastAIMove = null;
     _isProcessing = false;
     notifyListeners();
   }
@@ -291,6 +301,7 @@ class GameState extends ChangeNotifier {
     _totalMoveCount = 0;
     _extraTurn = false;
     _lastTrapdoorCell = null;
+    _lastAIMove = null;
     _modifierBannerText = null;
     notifyListeners();
   }

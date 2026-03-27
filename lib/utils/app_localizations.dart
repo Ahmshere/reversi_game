@@ -483,6 +483,16 @@ class AppLocalizations {
     zh: '🕳️ 地板塌陷了！',
   );
 
+  String get aiThinking => _s(
+    en: 'Computer is thinking…',
+    ru: 'Компьютер думает…',
+    he: 'המחשב חושב…',
+    es: 'El ordenador piensa…',
+    fr: 'L\'ordinateur réfléchit…',
+    de: 'Computer überlegt…',
+    zh: '电脑思考中…',
+  );
+
   // ── Туториал — навигация ──────────────────────────────────────────────────
 
   String get tutBack => _s(en:'Back', ru:'Назад', he:'חזרה', es:'Atrás', fr:'Retour', de:'Zurück', zh:'上一步');
