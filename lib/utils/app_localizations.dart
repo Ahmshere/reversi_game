@@ -493,6 +493,142 @@ class AppLocalizations {
     zh: '电脑思考中…',
   );
 
+  // ── Chaos Mode — правила ──────────────────────────────────────────────────
+
+  String get chaosRulesTitle => _s(
+    en: 'Chaos Mode Rules',
+    ru: 'Правила режима Хаос',
+    he: 'כללי מצב הכאוס',
+    es: 'Reglas del modo Caos',
+    fr: 'Règles du mode Chaos',
+    de: 'Chaos-Modus Regeln',
+    zh: '混乱模式规则',
+  );
+
+  String get chaosRulesIntro => _s(
+    en: 'Classic Reversi rules apply, but special cells appear on the board every few moves:',
+    ru: 'Действуют классические правила Реверси, но каждые несколько ходов на доске появляются особые клетки:',
+    he: 'כללי ריברסי קלאסיים חלים, אך כל כמה מהלכים מופיעות תאים מיוחדים:',
+    es: 'Aplican las reglas clásicas de Reversi, pero cada pocos turnos aparecen celdas especiales:',
+    fr: 'Les règles classiques du Reversi s\'appliquent, mais des cases spéciales apparaissent toutes les quelques cases :',
+    de: 'Klassische Reversi-Regeln gelten, aber alle paar Züge erscheinen besondere Felder:',
+    zh: '适用经典黑白棋规则，但每隔几步会出现特殊格子：',
+  );
+
+  String get chaosRuleBlocked => _s(
+    en: '🚫  Blocked — Cannot place a piece here. Also blocks capture lines passing through it.',
+    ru: '🚫  Заблокировано — Нельзя ставить фишку. Также блокирует линии захвата через клетку.',
+    he: '🚫  חסום — לא ניתן להניח כאן כלי. חוסם גם קווי לכידה.',
+    es: '🚫  Bloqueada — No puedes colocar una ficha aquí. También bloquea las líneas de captura.',
+    fr: '🚫  Bloquée — Impossible de poser une pièce ici. Bloque aussi les lignes de capture.',
+    de: '🚫  Blockiert — Hier kann keine Figur gesetzt werden. Blockiert auch Capture-Linien.',
+    zh: '🚫  封闭格 — 无法在此放子，同时阻断经过此格的翻转路线。',
+  );
+
+  String get chaosRuleExplosive => _s(
+    en: '💥  Explosive — When you land here, ALL 8 surrounding pieces flip to your colour instantly.',
+    ru: '💥  Взрывная — При постановке фишки ВСЕ 8 соседних фишек мгновенно переворачиваются в ваш цвет.',
+    he: '💥  נפץ — כשמניחים כלי כאן, כל 8 הכלים השכנים הופכים לצבעך מיידית.',
+    es: '💥  Explosiva — Al aterrizar aquí, las 8 piezas vecinas se voltean a tu color al instante.',
+    fr: '💥  Explosive — En posant ici, les 8 pièces voisines passent instantanément à ta couleur.',
+    de: '💥  Explosiv — Beim Setzen hier werden alle 8 Nachbarfiguren sofort zu deiner Farbe gedreht.',
+    zh: '💥  爆炸格 — 落子后，周围8格的棋子瞬间全部翻转为你的颜色。',
+  );
+
+  String get chaosRuleBonus => _s(
+    en: '⭐  Bonus — Landing here grants you an extra turn immediately.',
+    ru: '⭐  Бонус — При постановке фишки вы получаете дополнительный ход.',
+    he: '⭐  בונוס — נחיתה כאן מעניקה לך תור נוסף מיד.',
+    es: '⭐  Bono — Aterrizar aquí te concede un turno extra de inmediato.',
+    fr: '⭐  Bonus — Poser ici vous accorde immédiatement un tour supplémentaire.',
+    de: '💫  Bonus — Das Setzen hier gewährt dir sofort einen zusätzlichen Zug.',
+    zh: '⭐  奖励格 — 落子后立即获得一次额外回合。',
+  );
+
+  String get chaosRuleTrapdoor => _s(
+    en: '🕳️  Collapsing floor — Every ~10 moves, a random occupied cell collapses: the piece disappears into the void.',
+    ru: '🕳️  Проваливающийся пол — Каждые ~10 ходов случайная занятая клетка проваливается: фишка исчезает в бездну.',
+    he: '🕳️  רצפה קורסת — כל ~10 מהלכים, תא תפוס אקראי קורס: הכלי נופל לתוך התהום.',
+    es: '🕳️  Suelo que cede — Cada ~10 turnos, una celda ocupada aleatoria colapsa: la ficha desaparece en el vacío.',
+    fr: '🕳️  Sol qui s\'effondre — Tous les ~10 coups, une case occupée s\'effondre : la pièce disparaît dans le vide.',
+    de: '🕳️  Einstürzender Boden — Alle ~10 Züge bricht ein zufällig besetztes Feld ein: die Figur verschwindet im Nichts.',
+    zh: '🕳️  塌陷地板 — 每约10步，一个随机有子格塌陷，棋子坠入虚空。',
+  );
+
+  String get chaosRuleSpawn => _s(
+    en: 'New special cells appear every 6 moves (max 5 on board at once). Corners are always safe.',
+    ru: 'Новые особые клетки появляются каждые 6 ходов (не более 5 на доске одновременно). Углы всегда безопасны.',
+    he: 'תאים מיוחדים חדשים מופיעים כל 6 מהלכים (עד 5 בלוח בו-זמנית). הפינות תמיד בטוחות.',
+    es: 'Nuevas celdas especiales aparecen cada 6 turnos (máx. 5 en el tablero a la vez). Las esquinas siempre son seguras.',
+    fr: 'De nouvelles cases spéciales apparaissent tous les 6 coups (max. 5 sur le plateau à la fois). Les coins sont toujours sûrs.',
+    de: 'Neue Sonderfelder erscheinen alle 6 Züge (max. 5 gleichzeitig auf dem Brett). Ecken sind immer sicher.',
+    zh: '每6步出现新的特殊格（棋盘上最多同时5个）。角格永远安全。',
+  );
+
+  // ── Статистика ────────────────────────────────────────────────────────────
+
+  String get statsTitle => _s(
+    en: 'Statistics', ru: 'Статистика', he: 'סטטיסטיקה',
+    es: 'Estadísticas', fr: 'Statistiques', de: 'Statistiken', zh: '统计',
+  );
+  String get statsClassic => _s(
+    en: 'Classic', ru: 'Классика', he: 'קלאסי',
+    es: 'Clásico', fr: 'Classique', de: 'Klassisch', zh: '经典',
+  );
+  String get statsChaos => _s(
+    en: 'Chaos', ru: 'Хаос', he: 'כאוס',
+    es: 'Caos', fr: 'Chaos', de: 'Chaos', zh: '混乱',
+  );
+  String get statsEmpty => _s(
+    en: 'No games yet', ru: 'Игр пока нет', he: 'אין משחקים עדיין',
+    es: 'Aún sin partidas', fr: 'Pas encore de parties', de: 'Noch keine Spiele', zh: '暂无记录',
+  );
+  String get statsGames => _s(
+    en: 'Games', ru: 'Игр', he: 'משחקים',
+    es: 'Partidas', fr: 'Parties', de: 'Spiele', zh: '场次',
+  );
+  String get statsWins => _s(
+    en: 'Wins', ru: 'Побед', he: 'ניצחונות',
+    es: 'Victorias', fr: 'Victoires', de: 'Siege', zh: '胜',
+  );
+  String get statsLosses => _s(
+    en: 'Losses', ru: 'Поражений', he: 'הפסדים',
+    es: 'Derrotas', fr: 'Défaites', de: 'Niederlagen', zh: '负',
+  );
+  String get statsDraws => _s(
+    en: 'Draws', ru: 'Ничьих', he: 'תיקו',
+    es: 'Empates', fr: 'Nulles', de: 'Unentschieden', zh: '平',
+  );
+  String get statsAvgMoves => _s(
+    en: 'Avg\nmoves', ru: 'Ср.\nходов', he: 'מהל׳\nממוצע',
+    es: 'Mov.\npromedio', fr: 'Coups\nmoy.', de: 'Ø\nZüge', zh: '平均\n步数',
+  );
+  String get statsMoves => _s(
+    en: 'Moves', ru: 'Ходов', he: 'מהלכים',
+    es: 'Movimientos', fr: 'Coups', de: 'Züge', zh: '步数',
+  );
+  String get statsTrapdoors => _s(
+    en: 'Trapdoors', ru: 'Провалов', he: 'מלכודות',
+    es: 'Trampillas', fr: 'Trapdoors', de: 'Falltüren', zh: '陷阱',
+  );
+  String get statsExplosions => _s(
+    en: 'Explosions', ru: 'Взрывов', he: 'פיצוצים',
+    es: 'Explosiones', fr: 'Explosions', de: 'Explosionen', zh: '爆炸',
+  );
+  String get statsClear => _s(
+    en: 'Clear history', ru: 'Очистить историю', he: 'נקה היסטוריה',
+    es: 'Borrar historial', fr: 'Effacer l\'historique', de: 'Verlauf löschen', zh: '清除历史',
+  );
+  String get statsClearTitle => _s(
+    en: 'Clear statistics?', ru: 'Очистить статистику?', he: 'לנקות סטטיסטיקה?',
+    es: '¿Borrar estadísticas?', fr: 'Effacer les statistiques?', de: 'Statistiken löschen?', zh: '清除统计？',
+  );
+  String get statsClearConfirm => _s(
+    en: 'All game history will be deleted.', ru: 'Вся история игр будет удалена.',
+    he: 'כל היסטוריית המשחקים תימחק.', es: 'Se eliminará todo el historial.',
+    fr: 'Tout l\'historique sera supprimé.', de: 'Gesamter Verlauf wird gelöscht.', zh: '所有游戏记录将被删除。',
+  );
+
   // ── Туториал — навигация ──────────────────────────────────────────────────
 
   String get tutBack => _s(en:'Back', ru:'Назад', he:'חזרה', es:'Atrás', fr:'Retour', de:'Zurück', zh:'上一步');

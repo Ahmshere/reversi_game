@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import '../models/game_state.dart';
+import 'game_stats.dart';
 import '../utils/constants.dart';
 import '../utils/board_theme.dart';
 import '../utils/audio_service.dart';
@@ -10,6 +11,7 @@ import '../version.dart';
 import 'game_screen.dart';
 import 'mode_select_screen.dart';
 import 'settings_screen.dart';
+import 'stats_screen.dart';
 import 'tutorial_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -40,11 +42,30 @@ class _FloatingPiece {
 // ─────────────────────────────────────────────────────────────────────────────
 // Painter для анимированного фона
 // ─────────────────────────────────────────────────────────────────────────────
+// ── Данные одного взрыва на главном экране ────────────────────────────────────
+class _HomeBurst {
+  final double x, y;    // позиция (0..1)
+  final double startT;  // время запуска
+  final double duration;
+  final List<Color> colors;
+
+  const _HomeBurst({
+    required this.x, required this.y,
+    required this.startT, required this.duration,
+    required this.colors,
+  });
+}
+
 class _BackgroundPainter extends CustomPainter {
   final List<_FloatingPiece> pieces;
   final double time;
+  final List<_HomeBurst> bursts;
 
-  _BackgroundPainter({required this.pieces, required this.time});
+  _BackgroundPainter({
+    required this.pieces,
+    required this.time,
+    this.bursts = const [],
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -68,12 +89,18 @@ class _BackgroundPainter extends CustomPainter {
     _drawGlowOrb(canvas, Offset(size.width * 0.5, size.height * 0.1),
         80, const Color(0xFF2980B9), 0.05);
 
+    // ── Взрывы ────────────────────────────────────────────────────────────
+    for (final burst in bursts) {
+      final elapsed = time - burst.startT;
+      if (elapsed < 0 || elapsed > burst.duration) continue;
+      final p = (elapsed / burst.duration).clamp(0.0, 1.0);
+      _drawBurst(canvas, size, burst, p);
+    }
+
+    // ── Парящие фишки ─────────────────────────────────────────────────────
     for (final p in pieces) {
-      // Два синуса по Y с иррациональным соотношением частот (√2, √3)
-      // → суперпозиция никогда не повторяется
       final dy = math.sin(time * p.speed + p.angle) * 0.028
           + math.sin(time * p.speed2 + p.angle2) * 0.016;
-      // Лёгкий горизонтальный дрейф
       final dx = math.sin(time * p.speedX + p.angleX) * 0.012
           + math.cos(time * p.speed * 0.7071 + p.angle) * 0.008;
       final px = (p.x + dx) * size.width;
@@ -118,7 +145,77 @@ class _BackgroundPainter extends CustomPainter {
     }
   }
 
-  void _drawGlowOrb(Canvas canvas, Offset center, double r, Color color, double opacity) {
+  void _drawBurst(Canvas canvas, Size size, _HomeBurst burst, double p) {
+    final cx = burst.x * size.width;
+    final cy = burst.y * size.height;
+    final eased = Curves.easeOut.transform(p);
+
+    // Ударная волна
+    for (int i = 0; i < burst.colors.length; i++) {
+      final delay = i * 0.12;
+      final wp = ((p - delay) / (1 - delay)).clamp(0.0, 1.0);
+      if (wp <= 0) continue;
+      final wEased = Curves.easeOut.transform(wp);
+      canvas.drawCircle(
+        Offset(cx, cy),
+        wEased * (55 + i * 18),
+        Paint()
+          ..color = burst.colors[i].withOpacity((1 - wp) * 0.18)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3 * (1 - wp),
+      );
+    }
+
+    // Вспышка
+    if (p < 0.35) {
+      final flashA = (1 - p / 0.35) * 0.25;
+      canvas.drawCircle(
+        Offset(cx, cy),
+        35 * (1 - p * 0.5),
+        Paint()
+          ..shader = RadialGradient(colors: [
+            burst.colors[0].withOpacity(flashA),
+            Colors.transparent,
+          ]).createShader(Rect.fromCircle(
+              center: Offset(cx, cy), radius: 35)),
+      );
+    }
+
+    // Частицы
+    final rng = math.Random(burst.startT.toInt() * 1000 + burst.x.toInt());
+    for (int i = 0; i < 16; i++) {
+      final angle = i * math.pi * 2 / 16 + rng.nextDouble() * 0.4;
+      final speed = 28 + rng.nextDouble() * 32;
+      final dist = eased * speed;
+      final px2 = cx + math.cos(angle) * dist;
+      final py2 = cy + math.sin(angle) * dist;
+      final alpha = (1 - eased).clamp(0.0, 1.0) * 0.55;
+      final r = 2.5 + rng.nextDouble() * 3;
+      canvas.drawCircle(
+        Offset(px2, py2),
+        r * (1 - eased * 0.6),
+        Paint()
+          ..color = burst.colors[i % burst.colors.length].withOpacity(alpha),
+      );
+    }
+
+    // Искры
+    final sparkPaint = Paint()..strokeWidth = 1.5;
+    for (int i = 0; i < 10; i++) {
+      final a = i * math.pi * 2 / 10 + 0.3;
+      final len = 12 + 20 * eased;
+      final alpha = (1 - eased * 1.4).clamp(0.0, 1.0) * 0.5;
+      sparkPaint.color = burst.colors[0].withOpacity(alpha);
+      canvas.drawLine(
+        Offset(cx + math.cos(a) * 8, cy + math.sin(a) * 8),
+        Offset(cx + math.cos(a) * len, cy + math.sin(a) * len),
+        sparkPaint,
+      );
+    }
+  }
+
+  void _drawGlowOrb(Canvas canvas, Offset center, double r, Color color,
+      double opacity) {
     canvas.drawCircle(
       center,
       r,
@@ -129,7 +226,8 @@ class _BackgroundPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_BackgroundPainter o) => o.time != time;
+  bool shouldRepaint(_BackgroundPainter o) =>
+      o.time != time || o.bursts.length != bursts.length;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -147,9 +245,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final AudioService _audio = AudioService();
   AppLanguage _language = AppLanguage.english;
 
-  // Ticker накапливает время монотонно — никогда не сбрасывается, нет рывков
   late Ticker _ticker;
   double _time = 0.0;
+  double _lastBurstTime = 0.0; // когда был последний взрыв
+  final List<_HomeBurst> _bursts = [];
+  final _rng = math.Random();
+
+  // Палитры для взрывов — разные цвета каждый раз
+  static const _burstPalettes = [
+    [Color(0xFF27AE60), Color(0xFF56E39F), Color(0xFF1DB954)],
+    [Color(0xFF8E44AD), Color(0xFFAA00FF), Color(0xFFE040FB)],
+    [Color(0xFF2980B9), Color(0xFF00E5FF), Color(0xFF5DADE2)],
+    [Color(0xFFFF6B35), Color(0xFFFF1744), Color(0xFFFFCC00)],
+    [Color(0xFF27AE60), Color(0xFF2980B9), Color(0xFF8E44AD)],
+  ];
+
+  // Ticker накапливает время монотонно — никогда не сбрасывается, нет рывков
+
 
   late AnimationController _entranceController;
   late Animation<double> _titleAnim;
@@ -165,19 +277,25 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
 
-    // Ticker вызывается каждый кадр, elapsed всегда растёт
+    // Ticker накапливает время монотонно — никогда не сбрасывается, нет рывков
     _ticker = createTicker((elapsed) {
-      setState(() {
-        _time = elapsed.inMilliseconds / 1000.0;
-      });
-    })
-      ..start();
+      final t = elapsed.inMilliseconds / 1000.0;
+      // Редкий спавн взрыва: каждые 8–15 секунд случайно
+      final timeSinceLast = t - _lastBurstTime;
+      if (timeSinceLast > 8 &&
+          _rng.nextDouble() < 0.004) { // ~0.4% каждый кадр
+        _spawnBurst(t);
+        _lastBurstTime = t;
+      }
+      // Убираем завершённые взрывы
+      _bursts.removeWhere((b) => t - b.startT > b.duration + 0.5);
+      setState(() => _time = t);
+    })..start();
 
     _entranceController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
-    )
-      ..forward();
+    )..forward();
 
     _titleAnim = CurvedAnimation(
       parent: _entranceController,
@@ -222,6 +340,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     });
   }
 
+  void _spawnBurst(double t) {
+    final palette = _burstPalettes[_rng.nextInt(_burstPalettes.length)];
+    _bursts.add(_HomeBurst(
+      x: 0.1 + _rng.nextDouble() * 0.8,
+      y: 0.1 + _rng.nextDouble() * 0.7,
+      startT: t,
+      duration: 2.2 + _rng.nextDouble() * 1.0,
+      colors: palette,
+    ));
+  }
+
   @override
   void dispose() {
     _ticker.dispose();
@@ -232,9 +361,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final loc = _loc;
-    final size = MediaQuery
-        .of(context)
-        .size;
+    final size = MediaQuery.of(context).size;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D1B2A),
@@ -245,6 +372,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             painter: _BackgroundPainter(
               pieces: _pieces,
               time: _time,
+              bursts: _bursts,
             ),
             child: const SizedBox.expand(),
           ),
@@ -258,11 +386,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   alignment: Alignment.topRight,
                   child: Padding(
                     padding: const EdgeInsets.only(right: 8, top: 4),
-                    child: IconButton(
-                      icon: const Icon(Icons.settings_outlined,
-                          color: Colors.white54, size: 26),
-                      onPressed: () => _showSettings(context),
-                      tooltip: loc.settings,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.bar_chart_rounded,
+                              color: Colors.white54, size: 26),
+                          onPressed: () => _showStats(context),
+                          tooltip: _loc.statsTitle,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.settings_outlined,
+                              color: Colors.white54, size: 26),
+                          onPressed: () => _showSettings(context),
+                          tooltip: _loc.settings,
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -315,8 +454,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 colors: [Color(0xFF1DB954), Color(0xFF0D7A3A)],
                               ),
                               glowColor: const Color(0xFF1DB954),
-                              onPressed: () =>
-                                  _startGame(context, GameMode.vsPlayer),
+                              onPressed: () => _startGame(context, GameMode.vsPlayer),
                             ),
                           ),
                         ),
@@ -340,8 +478,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 colors: [Color(0xFF7C6CF2), Color(0xFF4A38CC)],
                               ),
                               glowColor: const Color(0xFF7C6CF2),
-                              onPressed: () =>
-                                  _startGame(context, GameMode.vsAI),
+                              onPressed: () => _startGame(context, GameMode.vsAI),
                             ),
                           ),
                         ),
@@ -463,9 +600,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     final configs = [
       (dx: -gap, dy: -gap, isBlack: false),
-      (dx: gap, dy: -gap, isBlack: true),
-      (dx: -gap, dy: gap, isBlack: true),
-      (dx: gap, dy: gap, isBlack: false),
+      (dx: gap,  dy: -gap, isBlack: true),
+      (dx: -gap, dy: gap,  isBlack: true),
+      (dx: gap,  dy: gap,  isBlack: false),
     ];
 
     return configs.map((c) {
@@ -516,15 +653,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return Column(
       children: [
         ShaderMask(
-          shaderCallback: (bounds) =>
-              const LinearGradient(
-                colors: [
-                  Color(0xFF56E39F),
-                  Color(0xFF27AE60),
-                  Color(0xFF5DADE2)
-                ],
-                stops: [0.0, 0.5, 1.0],
-              ).createShader(bounds),
+          shaderCallback: (bounds) => const LinearGradient(
+            colors: [Color(0xFF56E39F), Color(0xFF27AE60), Color(0xFF5DADE2)],
+            stops: [0.0, 0.5, 1.0],
+          ).createShader(bounds),
           child: Text(
             loc.appTitle,
             style: const TextStyle(
@@ -670,14 +802,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            GameScreen(
-              gameMode: mode,
-              initialTheme: _selectedTheme,
-              initialLanguage: _language,
-              isModifierMode: false,
-              onLanguageChanged: (lang) => setState(() => _language = lang),
-            ),
+        builder: (_) => GameScreen(
+          gameMode: mode,
+          initialTheme: _selectedTheme,
+          initialLanguage: _language,
+          isModifierMode: false,
+          onLanguageChanged: (lang) => setState(() => _language = lang),
+        ),
       ),
     );
   }
@@ -715,23 +846,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               child: Row(
                 children: [
                   ShaderMask(
-                    shaderCallback: (b) =>
-                        const LinearGradient(
-                          colors: [Color(0xFFFF6B35), Color(0xFFAA00FF)],
-                        ).createShader(b),
+                    shaderCallback: (b) => const LinearGradient(
+                      colors: [Color(0xFFFF6B35), Color(0xFFAA00FF)],
+                    ).createShader(b),
                     child: const Icon(Icons.local_fire_department_rounded,
                         color: Colors.white, size: 22),
                   ),
                   const SizedBox(width: 14),
                   ShaderMask(
-                    shaderCallback: (b) =>
-                        const LinearGradient(
-                          colors: [
-                            Color(0xFFFF6B35),
-                            Color(0xFFFF1744),
-                            Color(0xFFAA00FF)
-                          ],
-                        ).createShader(b),
+                    shaderCallback: (b) => const LinearGradient(
+                      colors: [Color(0xFFFF6B35), Color(0xFFFF1744), Color(0xFFAA00FF)],
+                    ).createShader(b),
                     child: const Text(
                       'CHAOS MODE',
                       style: TextStyle(
@@ -759,17 +884,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            ModeSelectScreen(
-              initialTheme: _selectedTheme,
-              initialLanguage: _language,
-              onLanguageChanged: (lang) => setState(() => _language = lang),
-            ),
+        builder: (_) => ModeSelectScreen(
+          initialTheme: _selectedTheme,
+          initialLanguage: _language,
+          onLanguageChanged: (lang) => setState(() => _language = lang),
+        ),
       ),
     );
   }
-
-
 
   void _showSettings(BuildContext context) {
     Navigator.push(
@@ -796,6 +918,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             loc: _loc,
           ),
         ),
+      ),
+    );
+  }
+
+  void _showStats(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StatsScreen(loc: _loc),
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'board.dart';
 import 'cell.dart';
+import '../screens/game_stats.dart';
 import '../utils/constants.dart';
 import '../utils/ai_player.dart';
 import '../utils/board_theme.dart';
@@ -27,9 +28,19 @@ class GameState extends ChangeNotifier {
   bool _extraTurn = false;
   Cell? _lastTrapdoorCell;
 
+  // ── Статистика текущей партии ─────────────────────────────────────────────
+  int _blackFlipped = 0;   // сколько фишек перевернул чёрный
+  int _whiteFlipped = 0;
+  int _trapdoorDrops = 0;  // фишек провалилось
+  int _explosionFlips = 0; // перевёрнуто взрывами
+
   // Последний ход ИИ — подсвечивается на доске
   Cell? _lastAIMove;
   Cell? get lastAIMove => _lastAIMove;
+
+  // Клетка взрыва — board_widget показывает партикл-анимацию
+  Cell? _explosionCell;
+  Cell? get explosionCell => _explosionCell;
 
   // Показывать баннер о сработавшем модификаторе
   String? _modifierBannerText;
@@ -92,9 +103,18 @@ class GameState extends ChangeNotifier {
       _audio.playMove();
     }
 
+    // ── Статистика переворотов ─────────────────────────────────────────────
+    final flipsThisMove = result.flippedCells.length - 1; // -1 сама поставленная
+    if (currentPlayer == Player.black) {
+      _whiteFlipped += flipsThisMove.clamp(0, 64);
+    } else {
+      _blackFlipped += flipsThisMove.clamp(0, 64);
+    }
+    _explosionFlips += result.explosiveFlipped.length;
+
     // ── Обработка модификаторов ─────────────────────────────────────────────
     if (_isModifierMode && result.modifierTriggered != null) {
-      await _handleModifierEffect(result);
+      await _handleModifierEffect(result, row, col);
     }
 
     _isProcessing = false;
@@ -134,12 +154,15 @@ class GameState extends ChangeNotifier {
     }
   }
 
-  Future<void> _handleModifierEffect(MoveResult result) async {
+  Future<void> _handleModifierEffect(
+      MoveResult result, int moveRow, int moveCol) async {
     switch (result.modifierTriggered) {
       case CellType.explosive:
+        _explosionCell = _board.getCell(moveRow, moveCol);
         _showModifierBanner(loc.modifierExplosion);
         notifyListeners();
         await Future.delayed(const Duration(milliseconds: 2000));
+        _explosionCell = null;
         _modifierBannerText = null;
         notifyListeners();
         break;
@@ -190,6 +213,7 @@ class GameState extends ChangeNotifier {
     target.cellType = CellType.normal;
     _lastTrapdoorCell = null;
     _modifierBannerText = null;
+    _trapdoorDrops++;
     notifyListeners();
   }
 
@@ -243,7 +267,7 @@ class GameState extends ChangeNotifier {
 
       // ИИ попал на модификатор
       if (_isModifierMode && result.modifierTriggered != null) {
-        await _handleModifierEffect(result);
+        await _handleModifierEffect(result, aiMove.row, aiMove.col);
       }
 
       if (_isModifierMode) {
@@ -302,7 +326,12 @@ class GameState extends ChangeNotifier {
     _extraTurn = false;
     _lastTrapdoorCell = null;
     _lastAIMove = null;
+    _explosionCell = null;
     _modifierBannerText = null;
+    _blackFlipped = 0;
+    _whiteFlipped = 0;
+    _trapdoorDrops = 0;
+    _explosionFlips = 0;
     notifyListeners();
   }
 
@@ -315,6 +344,28 @@ class GameState extends ChangeNotifier {
     } else {
       _audio.playWin();
     }
+    _saveRecord();
+  }
+
+  void _saveRecord() {
+    final w = winner;
+    StatsRepository().add(GameRecord(
+      dateTime: DateTime.now(),
+      mode: _isModifierMode ? 'chaos' : 'classic',
+      opponent: _gameMode == GameMode.vsAI ? 'ai' : 'player',
+      blackScore: blackScore,
+      whiteScore: whiteScore,
+      winner: w == Player.black
+          ? 'black'
+          : w == Player.white
+          ? 'white'
+          : 'draw',
+      totalMoves: _totalMoveCount,
+      blackFlipped: _blackFlipped,
+      whiteFlipped: _whiteFlipped,
+      trapdoorDrops: _trapdoorDrops,
+      explosionFlips: _explosionFlips,
+    ));
   }
 
   String getWinnerText() {

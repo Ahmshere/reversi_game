@@ -3,7 +3,7 @@ import '../utils/constants.dart';
 import '../utils/board_theme.dart';
 import '../utils/app_localizations.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   final BoardTheme currentTheme;
   final Function(BoardTheme) onThemeChanged;
   final bool? soundEnabled;
@@ -24,8 +24,31 @@ class SettingsScreen extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  late AppLanguage _currentLang;
+  late AppLocalizations _loc;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentLang = widget.currentLanguage ?? AppLanguage.english;
+    _loc = AppLocalizations(_currentLang);
+  }
+
+  void _selectLanguage(AppLanguage lang) {
+    setState(() {
+      _currentLang = lang;
+      _loc = AppLocalizations(lang);
+    });
+    widget.onLanguageChanged?.call(lang);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final l = loc ?? AppLocalizations(AppLanguage.english);
+    final l = _loc;
 
     return Scaffold(
       backgroundColor: GameConstants.backgroundColor,
@@ -50,18 +73,18 @@ class SettingsScreen extends StatelessWidget {
           padding: const EdgeInsets.all(16.0),
           child: ListView(
             children: [
-              // ── Звук ────────────────────────────────────────────────────
-              if (soundEnabled != null && onToggleSound != null) ...[
+              // ── Звук ──────────────────────────────────────────────────────
+              if (widget.soundEnabled != null && widget.onToggleSound != null) ...[
                 _sectionTitle(l.soundSection),
                 const SizedBox(height: 10),
                 _card(
                   child: Row(
                     children: [
                       Icon(
-                        soundEnabled!
+                        widget.soundEnabled!
                             ? Icons.volume_up_rounded
                             : Icons.volume_off_rounded,
-                        color: soundEnabled! ? Colors.white : Colors.white38,
+                        color: widget.soundEnabled! ? Colors.white : Colors.white38,
                         size: 22,
                       ),
                       const SizedBox(width: 12),
@@ -69,15 +92,14 @@ class SettingsScreen extends StatelessWidget {
                         child: Text(
                           l.gameSounds,
                           style: TextStyle(
-                            color:
-                            soundEnabled! ? Colors.white : Colors.white54,
+                            color: widget.soundEnabled! ? Colors.white : Colors.white54,
                             fontSize: 16,
                           ),
                         ),
                       ),
                       Switch(
-                        value: soundEnabled!,
-                        onChanged: (_) => onToggleSound!(),
+                        value: widget.soundEnabled!,
+                        onChanged: (_) => widget.onToggleSound!(),
                         activeColor: GameConstants.boardColor,
                       ),
                     ],
@@ -86,20 +108,28 @@ class SettingsScreen extends StatelessWidget {
                 const SizedBox(height: 24),
               ],
 
-              // ── Язык ────────────────────────────────────────────────────
-              if (currentLanguage != null && onLanguageChanged != null) ...[
+              // ── Язык ──────────────────────────────────────────────────────
+              if (widget.currentLanguage != null &&
+                  widget.onLanguageChanged != null) ...[
                 _sectionTitle(l.languageSection),
                 const SizedBox(height: 10),
                 _card(
                   child: Column(
                     children: AppLanguage.values.map((lang) {
-                      final isSelected = currentLanguage == lang;
+                      final isSelected = _currentLang == lang;
                       return InkWell(
-                        onTap: () => onLanguageChanged!(lang),
+                        onTap: () => _selectLanguage(lang),
                         borderRadius: BorderRadius.circular(8),
-                        child: Padding(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 4, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? Colors.white.withOpacity(0.07)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                           child: Row(
                             children: [
                               Text(
@@ -121,9 +151,17 @@ class SettingsScreen extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                              if (isSelected)
-                                const Icon(Icons.check_circle,
-                                    color: Colors.white, size: 18),
+                              AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 200),
+                                child: isSelected
+                                    ? const Icon(Icons.check_circle_rounded,
+                                    key: ValueKey('check'),
+                                    color: Color(0xFF27AE60),
+                                    size: 20)
+                                    : const SizedBox(
+                                    key: ValueKey('empty'),
+                                    width: 20),
+                              ),
                             ],
                           ),
                         ),
@@ -134,14 +172,13 @@ class SettingsScreen extends StatelessWidget {
                 const SizedBox(height: 24),
               ],
 
-              // ── Тема доски ───────────────────────────────────────────────
+              // ── Тема доски ────────────────────────────────────────────────
               _sectionTitle(l.boardThemeSection),
               const SizedBox(height: 10),
               GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                gridDelegate:
-                const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   childAspectRatio: 1.5,
                   crossAxisSpacing: 12,
@@ -151,17 +188,19 @@ class SettingsScreen extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final theme = BoardTheme.values[index];
                   final themeData = BoardThemeData.getTheme(theme);
-                  final isSelected = currentTheme == theme;
+                  final isSelected = widget.currentTheme == theme;
 
                   return GestureDetector(
-                    onTap: () => onThemeChanged(theme),
-                    child: Container(
+                    onTap: () => widget.onThemeChanged(theme),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
+                        color: Colors.white.withOpacity(isSelected ? 0.15 : 0.08),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color:
-                          isSelected ? Colors.white : Colors.transparent,
+                          color: isSelected
+                              ? const Color(0xFF27AE60)
+                              : Colors.transparent,
                           width: 2,
                         ),
                       ),
@@ -206,17 +245,23 @@ class SettingsScreen extends StatelessWidget {
                           Text(
                             themeData.name,
                             style: TextStyle(
-                              color:
-                              isSelected ? Colors.white : Colors.white70,
+                              color: isSelected ? Colors.white : Colors.white70,
                               fontSize: 13,
                               fontWeight: isSelected
                                   ? FontWeight.bold
                                   : FontWeight.normal,
                             ),
                           ),
-                          if (isSelected)
-                            const Icon(Icons.check_circle,
-                                color: Colors.white, size: 14),
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 200),
+                            child: isSelected
+                                ? const Icon(Icons.check_circle_rounded,
+                                key: ValueKey('check'),
+                                color: Color(0xFF27AE60),
+                                size: 14)
+                                : const SizedBox(
+                                key: ValueKey('empty'), height: 14),
+                          ),
                         ],
                       ),
                     ),
@@ -251,13 +296,13 @@ class SettingsScreen extends StatelessWidget {
 
   String _langFlag(AppLanguage lang) {
     switch (lang) {
-      case AppLanguage.english:  return '🇬🇧';
-      case AppLanguage.russian:  return '🇷🇺';
-      case AppLanguage.hebrew:   return '🇮🇱';
-      case AppLanguage.spanish:  return '🇪🇸';
-      case AppLanguage.french:   return '🇫🇷';
-      case AppLanguage.german:   return '🇩🇪';
-      case AppLanguage.chinese:  return '🇨🇳';
+      case AppLanguage.english: return '🇬🇧';
+      case AppLanguage.russian: return '🇷🇺';
+      case AppLanguage.hebrew:  return '🇮🇱';
+      case AppLanguage.spanish: return '🇪🇸';
+      case AppLanguage.french:  return '🇫🇷';
+      case AppLanguage.german:  return '🇩🇪';
+      case AppLanguage.chinese: return '🇨🇳';
     }
   }
 }
