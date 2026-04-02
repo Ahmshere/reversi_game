@@ -396,7 +396,7 @@ class _StatsScreenState extends State<StatsScreen>
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
-              setState(() => _repo.clear());
+              _repo.clear().then((_) => setState(() {}));
             },
             style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.redAccent.withOpacity(0.8)),

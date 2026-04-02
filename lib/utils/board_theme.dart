@@ -26,8 +26,8 @@ class BoardThemeData {
 
   static const Map<BoardTheme, BoardThemeData> themes = {
     BoardTheme.classic: BoardThemeData(
-      boardColor: Color(0xFF65CC8E),
-      gridLineColor: Color(0xFF1E8449),
+      boardColor: Color(0xFF7BE3A6),
+      gridLineColor: Color(0xFF369A60),
       hintColor: Color(0xFFF1C40F),   // жёлтый
       name: 'Classic Green',
     ),

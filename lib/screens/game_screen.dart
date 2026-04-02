@@ -6,6 +6,7 @@ import '../utils/board_theme.dart';
 import '../utils/app_localizations.dart';
 import '../widgets/board_widget.dart';
 import '../widgets/score_widget.dart';
+import '../widgets/ad_banner_widget.dart';
 import 'settings_screen.dart';
 
 class GameScreen extends StatelessWidget {
@@ -179,20 +180,8 @@ class _GameScreenContent extends StatelessWidget {
                       ),
                     ),
 
-                    // ── Рекламный баннер ────────────────────────────────────
-                    Container(
-                      height: 52,
-                      color: Colors.black.withOpacity(0.3),
-                      child: Center(
-                        child: Text(
-                          loc.adPlaceholder,
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.5),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ),
+                    // ── Рекламный баннер Google AdMob ───────────────────────
+                    const AdBannerWidget(height: 52),
                   ],
                 );
               }),

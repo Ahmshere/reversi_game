@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'screens/home_screen.dart';
+import 'screens/game_stats.dart';
 
-void main() {
-  // Фиксация ориентации экрана (только портретная)
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Загружаем сохранённую статистику
+  await StatsRepository().load();
+
+  // Инициализация Google Mobile Ads
+  await MobileAds.instance.initialize();
+
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,

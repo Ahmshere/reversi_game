@@ -10,7 +10,9 @@ dependencies:
     sdk: flutter
   provider: ^6.1.1
   cupertino_icons: ^1.0.8
-  audioplayers: ^5.2.1
+  audioplayers: ^6.1.0
+  google_mobile_ads: ^5.3.0
+  shared_preferences: ^2.3.0
 
 dev_dependencies:
   flutter_test:
@@ -20,7 +22,13 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
+  assets:
+    - assets/sounds/move.mp3
+    - assets/sounds/flip.mp3
+    - assets/sounds/win.mp3
+    - assets/sounds/lose.mp3
+    - assets/sounds/draw.mp3
+    - assets/sounds/skip.mp3
 
 flutter_launcher_icons:
   android: true

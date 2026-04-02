@@ -30,12 +30,19 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   late AppLanguage _currentLang;
   late AppLocalizations _loc;
+  late bool _soundEnabled;
 
   @override
   void initState() {
     super.initState();
     _currentLang = widget.currentLanguage ?? AppLanguage.english;
     _loc = AppLocalizations(_currentLang);
+    _soundEnabled = widget.soundEnabled ?? true;
+  }
+
+  void _toggleSound() {
+    setState(() => _soundEnabled = !_soundEnabled);
+    widget.onToggleSound?.call();
   }
 
   void _selectLanguage(AppLanguage lang) {
@@ -81,10 +88,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Row(
                     children: [
                       Icon(
-                        widget.soundEnabled!
+                        _soundEnabled
                             ? Icons.volume_up_rounded
                             : Icons.volume_off_rounded,
-                        color: widget.soundEnabled! ? Colors.white : Colors.white38,
+                        color: _soundEnabled ? Colors.white : Colors.white38,
                         size: 22,
                       ),
                       const SizedBox(width: 12),
@@ -92,14 +99,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         child: Text(
                           l.gameSounds,
                           style: TextStyle(
-                            color: widget.soundEnabled! ? Colors.white : Colors.white54,
+                            color: _soundEnabled ? Colors.white : Colors.white54,
                             fontSize: 16,
                           ),
                         ),
                       ),
                       Switch(
-                        value: widget.soundEnabled!,
-                        onChanged: (_) => widget.onToggleSound!(),
+                        value: _soundEnabled,
+                        onChanged: (_) => _toggleSound(),
                         activeColor: GameConstants.boardColor,
                       ),
                     ],

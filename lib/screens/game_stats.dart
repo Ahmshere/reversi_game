@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Запись одной сыгранной партии
 class GameRecord {
@@ -9,10 +10,10 @@ class GameRecord {
   final int whiteScore;
   final String winner;      // 'black' | 'white' | 'draw'
   final int totalMoves;
-  final int blackFlipped;   // сколько фишек перевернул чёрный
+  final int blackFlipped;
   final int whiteFlipped;
-  final int trapdoorDrops;  // упало в дыру (chaos)
-  final int explosionFlips; // перевёрнуто взрывами (chaos)
+  final int trapdoorDrops;
+  final int explosionFlips;
 
   const GameRecord({
     required this.dateTime,
@@ -57,13 +58,50 @@ class GameRecord {
   );
 }
 
-/// Хранилище всех партий (in-memory + JSON сериализация)
+/// Хранилище всех партий — сохраняется в SharedPreferences
 class StatsRepository {
   static final StatsRepository _instance = StatsRepository._();
   factory StatsRepository() => _instance;
   StatsRepository._();
 
+  static const _kStatsKey = 'reversi_game_stats';
+
   final List<GameRecord> _records = [];
+  bool _loaded = false;
+
+  // ── Загрузка при первом обращении ─────────────────────────────────────────
+
+  /// Вызвать один раз при старте приложения (в main.dart)
+  Future<void> load() async {
+    if (_loaded) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_kStatsKey);
+      if (raw != null && raw.isNotEmpty) {
+        final list = jsonDecode(raw) as List;
+        _records
+          ..clear()
+          ..addAll(
+            list.map((e) => GameRecord.fromJson(e as Map<String, dynamic>)),
+          );
+      }
+    } catch (_) {
+      // Если данные повреждены — начинаем с чистого листа
+    }
+    _loaded = true;
+  }
+
+  Future<void> _save() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        _kStatsKey,
+        jsonEncode(_records.map((r) => r.toJson()).toList()),
+      );
+    } catch (_) {}
+  }
+
+  // ── Публичный API ─────────────────────────────────────────────────────────
 
   List<GameRecord> get records => List.unmodifiable(_records);
   List<GameRecord> get classicRecords =>
@@ -71,17 +109,22 @@ class StatsRepository {
   List<GameRecord> get chaosRecords =>
       _records.where((r) => r.mode == 'chaos').toList();
 
-  void add(GameRecord record) => _records.insert(0, record); // новые первыми
+  Future<void> add(GameRecord record) async {
+    _records.insert(0, record); // новые первыми
+    await _save();
+  }
 
-  void clear() => _records.clear();
+  Future<void> clear() async {
+    _records.clear();
+    await _save();
+  }
 
   // Сводная статистика
   int get totalGames => _records.length;
-  int get totalWins =>
-      _records.where((r) => r.winner == 'black').length;
-  int get totalMoves =>
-      _records.fold(0, (sum, r) => sum + r.totalMoves);
+  int get totalWins => _records.where((r) => r.winner == 'black').length;
+  int get totalMoves => _records.fold(0, (sum, r) => sum + r.totalMoves);
 
+  // Оставляем для обратной совместимости
   String toJson() => jsonEncode(_records.map((r) => r.toJson()).toList());
 
   void fromJson(String raw) {
@@ -89,7 +132,9 @@ class StatsRepository {
       final list = jsonDecode(raw) as List;
       _records
         ..clear()
-        ..addAll(list.map((e) => GameRecord.fromJson(e as Map<String, dynamic>)));
+        ..addAll(
+          list.map((e) => GameRecord.fromJson(e as Map<String, dynamic>)),
+        );
     } catch (_) {}
   }
 }

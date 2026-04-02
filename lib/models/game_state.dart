@@ -125,7 +125,7 @@ class GameState extends ChangeNotifier {
     }
 
     if (isGameOver) {
-      _playGameOverSound();
+      await _playGameOverSound();
       return;
     }
 
@@ -296,7 +296,7 @@ class GameState extends ChangeNotifier {
         return;
       }
 
-      if (isGameOver) _playGameOverSound();
+      if (isGameOver) await _playGameOverSound();
     }
 
     _lastAIMove = null;
@@ -335,7 +335,7 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _playGameOverSound() {
+  Future<void> _playGameOverSound() async {
     final w = winner;
     if (w == Player.none) {
       _audio.playDraw();
@@ -344,12 +344,12 @@ class GameState extends ChangeNotifier {
     } else {
       _audio.playWin();
     }
-    _saveRecord();
+    await _saveRecord();
   }
 
-  void _saveRecord() {
+  Future<void> _saveRecord() async {
     final w = winner;
-    StatsRepository().add(GameRecord(
+    await StatsRepository().add(GameRecord(
       dateTime: DateTime.now(),
       mode: _isModifierMode ? 'chaos' : 'classic',
       opponent: _gameMode == GameMode.vsAI ? 'ai' : 'player',
