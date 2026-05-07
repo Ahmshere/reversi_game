@@ -8,8 +8,8 @@ class AudioService {
 
   bool _soundEnabled = true;
 
-  // Пул плееров для одновременного воспроизведения
-  final List<AudioPlayer> _pool = List.generate(4, (_) => AudioPlayer());
+  // Увеличенный пул плееров для надёжного воспроизведения
+  final List<AudioPlayer> _pool = List.generate(8, (_) => AudioPlayer());
   int _poolIndex = 0;
 
   bool get soundEnabled => _soundEnabled;
@@ -52,6 +52,8 @@ class AudioService {
     try {
       final player = _pool[_poolIndex % _pool.length];
       _poolIndex++;
+      // Останавливаем предыдущий звук на этом плеере и сразу играем новый
+      await player.stop();
       await player.play(AssetSource(assetPath));
     } catch (_) {
       // Игнорируем ошибки воспроизведения

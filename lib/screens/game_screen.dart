@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/game_state.dart';
@@ -38,15 +39,34 @@ class GameScreen extends StatelessWidget {
   }
 }
 
-class _GameScreenContent extends StatelessWidget {
+class _GameScreenContent extends StatefulWidget {
   final Function(AppLanguage)? onLanguageChanged;
   const _GameScreenContent({Key? key, this.onLanguageChanged}) : super(key: key);
+
+  @override
+  State<_GameScreenContent> createState() => _GameScreenContentState();
+}
+
+class _GameScreenContentState extends State<_GameScreenContent> {
+  bool _dialogShown = false;
 
   @override
   Widget build(BuildContext context) {
     return Consumer<GameState>(
       builder: (context, gameState, _) {
         final loc = gameState.loc;
+
+        // Показываем диалог только один раз за партию
+        if (gameState.isGameOver && !_dialogShown) {
+          _dialogShown = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _showGameOverDialog(context, gameState, loc);
+          });
+        }
+        // Сбрасываем флаг когда началась новая игра
+        if (!gameState.isGameOver && _dialogShown) {
+          _dialogShown = false;
+        }
 
         return WillPopScope(
           onWillPop: () async {
@@ -110,12 +130,6 @@ class _GameScreenContent extends StatelessWidget {
             ),
             body: SafeArea(
               child: Builder(builder: (context) {
-                if (gameState.isGameOver) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    _showGameOverDialog(context, gameState, loc);
-                  });
-                }
-
                 return Column(
                   children: [
                     // ── Верхняя часть: счёт + индикатор игрока + доска ─────
@@ -497,7 +511,7 @@ class _GameScreenContent extends StatelessWidget {
         currentLanguage: gameState.language,
         onLanguageChanged: (lang) {
           gameState.setLanguage(lang);
-          onLanguageChanged?.call(lang);
+          widget.onLanguageChanged?.call(lang);
         },
         onThemeChanged: (theme) {
           gameState.setBoardTheme(theme);
@@ -562,52 +576,14 @@ class _GameScreenContent extends StatelessWidget {
   }
 
   void _showGameOverDialog(BuildContext context, GameState gs, loc) {
+    final isWin = gs.winner == Player.black ||
+        (gs.gameMode == GameMode.vsPlayer && gs.winner != Player.none);
+    final isDraw = gs.winner == Player.none;
+
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: GameConstants.backgroundColor,
-        title: Text(gs.getWinnerText(),
-            style: GameConstants.titleStyle.copyWith(fontSize: 28),
-            textAlign: TextAlign.center),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 16),
-            Text(loc.finalScore,
-                style: TextStyle(
-                    color: Colors.white.withOpacity(0.7), fontSize: 16)),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildFinalScore(
-                    loc.blackPlayer, gs.blackScore, GameConstants.blackPlayerColor),
-                _buildFinalScore(
-                    loc.whitePlayer, gs.whiteScore, GameConstants.whitePlayerColor),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.pop(context);
-            },
-            child: Text(loc.menu, style: const TextStyle(color: Colors.white)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              context.read<GameState>().newGame();
-            },
-            style: ElevatedButton.styleFrom(
-                backgroundColor: GameConstants.boardColor),
-            child: Text(loc.playAgain),
-          ),
-        ],
-      ),
+      builder: (ctx) => _GameOverDialog(gs: gs, loc: loc, isWin: isWin, isDraw: isDraw),
     );
   }
 
@@ -626,6 +602,276 @@ class _GameScreenContent extends StatelessWidget {
             style: const TextStyle(
                 color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
       ],
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Диалог конца игры с эффектом конфетти
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _Confetto {
+  double x, y, speed, angle, rotation, rotSpeed, size;
+  Color color;
+  _Confetto({required this.x, required this.y, required this.speed,
+    required this.angle, required this.rotation, required this.rotSpeed,
+    required this.size, required this.color});
+}
+
+class _ConfettiPainter extends CustomPainter {
+  final List<_Confetto> confetti;
+  _ConfettiPainter(this.confetti);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint();
+    for (final c in confetti) {
+      paint.color = c.color;
+      canvas.save();
+      canvas.translate(c.x, c.y);
+      canvas.rotate(c.rotation);
+      canvas.drawRect(
+        Rect.fromCenter(center: Offset.zero, width: c.size, height: c.size * 0.5),
+        paint,
+      );
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ConfettiPainter o) => true;
+}
+
+class _GameOverDialog extends StatefulWidget {
+  final GameState gs;
+  final dynamic loc;
+  final bool isWin;
+  final bool isDraw;
+  const _GameOverDialog({required this.gs, required this.loc,
+    required this.isWin, required this.isDraw});
+
+  @override
+  State<_GameOverDialog> createState() => _GameOverDialogState();
+}
+
+class _GameOverDialogState extends State<_GameOverDialog>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late List<_Confetto> _confetti;
+  final _rng = math.Random();
+
+  static const _colors = [
+    Color(0xFFFF6B35), Color(0xFFFFCC00), Color(0xFF27AE60),
+    Color(0xFF5DADE2), Color(0xFFAA00FF), Color(0xFFFF1744),
+    Color(0xFF00E5FF), Color(0xFFFFFFFF),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(seconds: 4))
+      ..repeat();
+    _confetti = List.generate(80, (_) => _Confetto(
+      x: _rng.nextDouble() * 400,
+      y: -_rng.nextDouble() * 400,
+      speed: 1.5 + _rng.nextDouble() * 3,
+      angle: (_rng.nextDouble() - 0.5) * 0.5,
+      rotation: _rng.nextDouble() * math.pi * 2,
+      rotSpeed: (_rng.nextDouble() - 0.5) * 0.2,
+      size: 6 + _rng.nextDouble() * 8,
+      color: _colors[_rng.nextInt(_colors.length)],
+    ));
+    _ctrl.addListener(_updateConfetti);
+  }
+
+  void _updateConfetti() {
+    if (!widget.isWin) return;
+    setState(() {
+      for (final c in _confetti) {
+        c.y += c.speed;
+        c.x += math.sin(c.angle) * 1.5;
+        c.rotation += c.rotSpeed;
+        if (c.y > 600) {
+          c.y = -20;
+          c.x = _rng.nextDouble() * 400;
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.removeListener(_updateConfetti);
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final gs = widget.gs;
+    final loc = widget.loc;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Конфетти (только при победе)
+          if (widget.isWin)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: _ConfettiPainter(_confetti),
+                ),
+              ),
+            ),
+
+          // Основной диалог
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: GameConstants.backgroundColor,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: widget.isDraw
+                    ? Colors.white24
+                    : widget.isWin
+                    ? const Color(0xFFFFCC00)
+                    : Colors.white24,
+                width: 2,
+              ),
+              boxShadow: widget.isWin ? [
+                BoxShadow(
+                  color: const Color(0xFFFFCC00).withOpacity(0.3),
+                  blurRadius: 30,
+                  spreadRadius: 5,
+                ),
+              ] : null,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Эмодзи + заголовок
+                Text(
+                  widget.isDraw ? '🤝' : widget.isWin ? '🏆' : '😔',
+                  style: const TextStyle(fontSize: 48),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  gs.getWinnerText(),
+                  style: GameConstants.titleStyle.copyWith(
+                    fontSize: 26,
+                    color: widget.isDraw
+                        ? Colors.white70
+                        : widget.isWin
+                        ? const Color(0xFFFFCC00)
+                        : Colors.white,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                // Счёт
+                Text(loc.finalScore,
+                    style: TextStyle(
+                        color: Colors.white.withOpacity(0.6), fontSize: 14)),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _scoreBox(loc.blackPlayer, gs.blackScore,
+                        GameConstants.blackPlayerColor,
+                        isWinner: gs.winner == Player.black),
+                    _scoreBox(loc.whitePlayer, gs.whiteScore,
+                        GameConstants.whitePlayerColor,
+                        isWinner: gs.winner == Player.white),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                // Кнопки
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        final gameState = context.read<GameState>();
+                        Navigator.pop(context);
+                        gameState.newGame();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: GameConstants.boardColor,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(
+                        loc.playAgain,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.pop(context);
+                      },
+                      child: Text(
+                        loc.menu,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.white70),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _scoreBox(String label, int score, Color color, {bool isWinner = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: isWinner
+            ? color.withOpacity(0.15)
+            : Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isWinner ? color.withOpacity(0.6) : Colors.white12,
+          width: isWinner ? 2 : 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 28, height: 28,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+              boxShadow: isWinner ? [
+                BoxShadow(color: color.withOpacity(0.5), blurRadius: 8)
+              ] : null,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(label,
+              style: TextStyle(
+                  color: isWinner ? Colors.white : Colors.white54,
+                  fontSize: 12)),
+          const SizedBox(height: 2),
+          Text(score.toString(),
+              style: TextStyle(
+                  color: isWinner ? Colors.white : Colors.white70,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800)),
+        ],
+      ),
     );
   }
 }
