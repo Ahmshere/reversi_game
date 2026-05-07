@@ -1,6 +1,6 @@
 name: reversi_game
 description: "Reversi"
-version: 1.0.0+1
+version: 1.0.0+8
 
 environment:
   sdk: ^3.10.3

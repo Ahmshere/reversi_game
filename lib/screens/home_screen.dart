@@ -499,7 +499,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 padding:
                                 const EdgeInsets.symmetric(horizontal: 12),
                                 child: Text(
-                                  'ИЛИ',
+                                  '*',
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(0.3),
                                     fontSize: 11,

@@ -116,7 +116,7 @@ class _CellWidgetState extends State<CellWidget>
 
     // Взрыв
     _explosionCtrl = AnimationController(
-      duration: const Duration(milliseconds: 700),
+      duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
     _explosionScale = Tween<double>(begin: 0.5, end: 2.2).animate(
@@ -131,7 +131,7 @@ class _CellWidgetState extends State<CellWidget>
 
     // Подсветка ИИ
     _aiGlowCtrl = AnimationController(
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 1000),
       vsync: this,
     )..repeat(reverse: true);
     _aiGlowAnim = Tween<double>(begin: 0.3, end: 1.0).animate(
@@ -455,7 +455,7 @@ class _CellWidgetState extends State<CellWidget>
   Widget _buildHint() {
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.5, end: 1.0),
-      duration: const Duration(milliseconds: 700),
+      duration: const Duration(milliseconds: 1000),
       curve: Curves.easeInOut,
       builder: (_, v, __) => Transform.scale(
         scale: 0.75 + 0.25 * v,

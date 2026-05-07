@@ -259,7 +259,7 @@ class GameState extends ChangeNotifier {
       // Подсвечиваем куда ходит ИИ — показываем 800ms до хода
       _lastAIMove = aiMove;
       notifyListeners();
-      await Future.delayed(const Duration(milliseconds: 800));
+      await Future.delayed(const Duration(milliseconds: 1000));
 
       final result = _board.makeMove(aiMove.row, aiMove.col);
       notifyListeners();
@@ -297,6 +297,13 @@ class GameState extends ChangeNotifier {
       }
 
       if (isGameOver) await _playGameOverSound();
+
+    } else {
+      // ИИ некуда ходить
+      _isProcessing = false;
+      await _showSkipBannerAndSkip();
+      notifyListeners();
+      return;
     }
 
     _lastAIMove = null;

@@ -1,4 +1,4 @@
-package com.example.reversi_game;
+package com.adelaida.reversi_game;
 
 import io.flutter.embedding.android.FlutterActivity;
 
