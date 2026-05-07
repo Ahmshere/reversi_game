@@ -583,7 +583,20 @@ class _GameScreenContentState extends State<_GameScreenContent> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => _GameOverDialog(gs: gs, loc: loc, isWin: isWin, isDraw: isDraw),
+      builder: (ctx) => _GameOverDialog(
+        gs: gs,
+        loc: loc,
+        isWin: isWin,
+        isDraw: isDraw,
+        onPlayAgain: () {
+          Navigator.pop(ctx);
+          gs.newGame();
+        },
+        onMenu: () {
+          Navigator.pop(ctx);
+          Navigator.pop(context);
+        },
+      ),
     );
   }
 
@@ -647,8 +660,17 @@ class _GameOverDialog extends StatefulWidget {
   final dynamic loc;
   final bool isWin;
   final bool isDraw;
-  const _GameOverDialog({required this.gs, required this.loc,
-    required this.isWin, required this.isDraw});
+  final VoidCallback onPlayAgain;
+  final VoidCallback onMenu;
+
+  const _GameOverDialog({
+    required this.gs,
+    required this.loc,
+    required this.isWin,
+    required this.isDraw,
+    required this.onPlayAgain,
+    required this.onMenu,
+  });
 
   @override
   State<_GameOverDialog> createState() => _GameOverDialogState();
@@ -792,11 +814,7 @@ class _GameOverDialogState extends State<_GameOverDialog>
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     ElevatedButton(
-                      onPressed: () {
-                        final gameState = context.read<GameState>();
-                        Navigator.pop(context);
-                        gameState.newGame();
-                      },
+                      onPressed: widget.onPlayAgain,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: GameConstants.boardColor,
                         padding: const EdgeInsets.symmetric(vertical: 14),
@@ -814,10 +832,7 @@ class _GameOverDialogState extends State<_GameOverDialog>
                     ),
                     const SizedBox(height: 8),
                     TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        Navigator.pop(context);
-                      },
+                      onPressed: widget.onMenu,
                       child: Text(
                         loc.menu,
                         textAlign: TextAlign.center,
