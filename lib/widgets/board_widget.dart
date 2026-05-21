@@ -130,7 +130,9 @@ class BoardWidget extends StatefulWidget {
   final BoardTheme boardTheme;
   final Cell? lastAIMove;
   final bool isAIThinking;
-  final Cell? explosionCell;   // ← координата взрыва
+  final Cell? explosionCell;
+  final Cell? lastMoveCell;
+  final int gameId; // ← для пересоздания CellWidget при новой игре
 
   const BoardWidget({
     Key? key,
@@ -142,6 +144,8 @@ class BoardWidget extends StatefulWidget {
     this.lastAIMove,
     this.isAIThinking = false,
     this.explosionCell,
+    this.lastMoveCell,
+    this.gameId = 0,
   }) : super(key: key);
 
   @override
@@ -149,12 +153,17 @@ class BoardWidget extends StatefulWidget {
 }
 
 class _BoardWidgetState extends State<BoardWidget>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
 
   late AnimationController _explosionCtrl;
   late Animation<double> _explosionAnim;
   List<_Particle> _particles = [];
   Cell? _activeExplosionCell;
+
+  // ── Анимация появления доски ─────────────────────────────────────────────
+  late AnimationController _entranceCtrl;
+  late Animation<double> _entranceScale;
+  late Animation<double> _entranceFade;
 
   @override
   void initState() {
@@ -167,6 +176,21 @@ class _BoardWidgetState extends State<BoardWidget>
       parent: _explosionCtrl,
       curve: Curves.easeOut,
     );
+
+    // Появление доски при старте
+    _entranceCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    _entranceScale = Tween<double>(begin: 0.75, end: 1.0).animate(
+      CurvedAnimation(parent: _entranceCtrl, curve: Curves.easeOutBack),
+    );
+    _entranceFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _entranceCtrl,
+          curve: const Interval(0.0, 0.7, curve: Curves.easeOut)),
+    );
+    // Запускаем сразу
+    _entranceCtrl.forward();
   }
 
   @override
@@ -183,6 +207,10 @@ class _BoardWidgetState extends State<BoardWidget>
     if (widget.explosionCell == null && oldWidget.explosionCell != null) {
       _explosionCtrl.reset();
       _activeExplosionCell = null;
+    }
+    // Новая игра — переиграть анимацию появления доски
+    if (widget.lastMoveCell == null && oldWidget.lastMoveCell != null) {
+      _entranceCtrl.forward(from: 0.0);
     }
   }
 
@@ -208,6 +236,7 @@ class _BoardWidgetState extends State<BoardWidget>
   @override
   void dispose() {
     _explosionCtrl.dispose();
+    _entranceCtrl.dispose();
     super.dispose();
   }
 
@@ -226,81 +255,91 @@ class _BoardWidgetState extends State<BoardWidget>
   Widget build(BuildContext context) {
     final themeData = BoardThemeData.getTheme(widget.boardTheme);
 
-    return AspectRatio(
-      aspectRatio: 1.0,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final boardSize = Size(constraints.maxWidth, constraints.maxHeight);
-          return Stack(
-            children: [
-              // ── Сетка клеток ──────────────────────────────────────────────
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: themeData.gridLineColor,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: GridView.builder(
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: GameConstants.boardSize,
-                  ),
-                  itemCount: GameConstants.boardSize * GameConstants.boardSize,
-                  itemBuilder: (context, index) {
-                    final row = index ~/ GameConstants.boardSize;
-                    final col = index % GameConstants.boardSize;
-                    final cell = widget.board.getCell(row, col);
-                    final isValidMove = widget.validMoves
-                        .any((c) => c.row == row && c.col == col);
-                    final showHint = widget.showValidMoves && isValidMove;
-                    final isAITarget = widget.lastAIMove != null &&
-                        widget.lastAIMove!.row == row &&
-                        widget.lastAIMove!.col == col;
-
-                    return CellWidget(
-                      key: ValueKey('cell_${row}_$col'),
-                      cell: cell,
-                      isValidMove: isValidMove,
-                      showHint: showHint,
-                      onTap: () => widget.onCellTap(row, col),
-                      boardColor: themeData.boardColor,
-                      gridLineColor: themeData.gridLineColor,
-                      hintColor: themeData.hintColor,
-                      isAITarget: isAITarget,
-                      isAIThinking: widget.isAIThinking && isAITarget,
-                    );
-                  },
-                ),
-              ),
-
-              // ── Взрыв — поверх доски ──────────────────────────────────────
-              if (_activeExplosionCell != null)
-                AnimatedBuilder(
-                  animation: _explosionAnim,
-                  builder: (_, __) {
-                    if (_explosionAnim.value <= 0) return const SizedBox.shrink();
-                    return IgnorePointer(
-                      child: CustomPaint(
-                        size: boardSize,
-                        painter: _ExplosionPainter(
-                          progress: _explosionAnim.value,
-                          center: _cellCenter(_activeExplosionCell!, boardSize),
-                          particles: _particles,
-                        ),
+    return AnimatedBuilder(
+      animation: _entranceCtrl,
+      builder: (_, child) => FadeTransition(
+        opacity: _entranceFade,
+        child: Transform.scale(
+          scale: _entranceScale.value,
+          child: child,
+        ),
+      ),
+      child: AspectRatio(
+        aspectRatio: 1.0,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final boardSize = Size(constraints.maxWidth, constraints.maxHeight);
+            return Stack(
+              children: [
+                // ── Сетка клеток ──────────────────────────────────────────────
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: themeData.gridLineColor,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
                       ),
-                    );
-                  },
+                    ],
+                  ),
+                  child: GridView.builder(
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: GameConstants.boardSize,
+                    ),
+                    itemCount: GameConstants.boardSize * GameConstants.boardSize,
+                    itemBuilder: (context, index) {
+                      final row = index ~/ GameConstants.boardSize;
+                      final col = index % GameConstants.boardSize;
+                      final cell = widget.board.getCell(row, col);
+                      final isValidMove = widget.validMoves
+                          .any((c) => c.row == row && c.col == col);
+                      final showHint = widget.showValidMoves && isValidMove;
+                      final isAITarget = widget.lastAIMove != null &&
+                          widget.lastAIMove!.row == row &&
+                          widget.lastAIMove!.col == col;
+
+                      return CellWidget(
+                        key: ValueKey('cell_${widget.gameId}_${row}_$col'),
+                        cell: cell,
+                        isValidMove: isValidMove,
+                        showHint: showHint,
+                        onTap: () => widget.onCellTap(row, col),
+                        boardColor: themeData.boardColor,
+                        gridLineColor: themeData.gridLineColor,
+                        hintColor: themeData.hintColor,
+                        isAITarget: isAITarget,
+                        isAIThinking: widget.isAIThinking && isAITarget,
+                      );
+                    },
+                  ),
                 ),
-            ],
-          );
-        },
+
+                // ── Взрыв — поверх доски ──────────────────────────────────────
+                if (_activeExplosionCell != null)
+                  AnimatedBuilder(
+                    animation: _explosionAnim,
+                    builder: (_, __) {
+                      if (_explosionAnim.value <= 0) return const SizedBox.shrink();
+                      return IgnorePointer(
+                        child: CustomPaint(
+                          size: boardSize,
+                          painter: _ExplosionPainter(
+                            progress: _explosionAnim.value,
+                            center: _cellCenter(_activeExplosionCell!, boardSize),
+                            particles: _particles,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

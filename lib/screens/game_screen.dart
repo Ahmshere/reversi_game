@@ -8,6 +8,8 @@ import '../utils/app_localizations.dart';
 import '../widgets/board_widget.dart';
 import '../widgets/score_widget.dart';
 import '../widgets/ad_banner_widget.dart';
+import '../widgets/chaos_background.dart';
+import '../widgets/classic_background.dart';
 import 'settings_screen.dart';
 
 class GameScreen extends StatelessWidget {
@@ -20,7 +22,7 @@ class GameScreen extends StatelessWidget {
   const GameScreen({
     Key? key,
     required this.gameMode,
-    this.initialTheme = BoardTheme.classic,
+    this.initialTheme = BoardTheme.night,
     this.initialLanguage = AppLanguage.english,
     this.isModifierMode = false,
     this.onLanguageChanged,
@@ -74,7 +76,8 @@ class _GameScreenContentState extends State<_GameScreenContent> {
             return await _showExitConfirmation(context, loc) ?? false;
           },
           child: Scaffold(
-            backgroundColor: GameConstants.backgroundColor,
+            backgroundColor: Colors.transparent,
+            extendBodyBehindAppBar: true,
             appBar: AppBar(
               backgroundColor: Colors.transparent,
               elevation: 0,
@@ -128,78 +131,90 @@ class _GameScreenContentState extends State<_GameScreenContent> {
                 ),
               ],
             ),
-            body: SafeArea(
-              child: Builder(builder: (context) {
-                return Column(
-                  children: [
-                    // ── Верхняя часть: счёт + индикатор игрока + доска ─────
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-                        child: Column(
-                          children: [
-                            ScoreWidget(
-                              blackScore: gameState.blackScore,
-                              whiteScore: gameState.whiteScore,
-                              currentPlayer: gameState.currentPlayer,
-                              blackLabel: loc.blackPlayer,
-                              whiteLabel: loc.whitePlayer,
-                            ),
-                            const SizedBox(height: 10),
-                            _buildCurrentPlayerIndicator(gameState, loc),
-                            const SizedBox(height: 10),
-                            // Доска занимает всё оставшееся место
-                            Expanded(
-                              child: Center(
-                                child: BoardWidget(
-                                  board: gameState.board,
-                                  validMoves: gameState.validMoves,
-                                  showValidMoves: gameState.showValidMoves,
-                                  onCellTap: (row, col) =>
-                                      _handleCellTap(context, gameState, row, col),
-                                  boardTheme: gameState.boardTheme,
-                                  lastAIMove: gameState.lastAIMove,
-                                  isAIThinking: gameState.isProcessing &&
-                                      gameState.currentPlayer == Player.white &&
-                                      gameState.gameMode == GameMode.vsAI,
-                                  explosionCell: gameState.explosionCell,
+            body: Stack(
+              children: [
+                // ── Огненный фон только в Chaos режиме ──────────────────────
+                if (gameState.isModifierMode)
+                  const Positioned.fill(child: ChaosBackground()),
+                // ── Тёмный фон с листьями для обычного режима ───────────────
+                if (!gameState.isModifierMode)
+                  const Positioned.fill(child: ClassicBackground()),
+                SafeArea(
+                  child: Builder(builder: (context) {
+                    return Column(
+                      children: [
+                        // ── Верхняя часть: счёт + индикатор игрока + доска ─────
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                            child: Column(
+                              children: [
+                                ScoreWidget(
+                                  blackScore: gameState.blackScore,
+                                  whiteScore: gameState.whiteScore,
+                                  currentPlayer: gameState.currentPlayer,
+                                  blackLabel: loc.blackPlayer,
+                                  whiteLabel: loc.whitePlayer,
                                 ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    // ── Нижняя зона ФИКСИРОВАННОЙ высоты — баннеры ─────────
-                    // Высота не меняется → доска не прыгает
-                    SizedBox(
-                      height: 56,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 350),
-                          transitionBuilder: (child, anim) => FadeTransition(
-                            opacity: anim,
-                            child: SlideTransition(
-                              position: Tween<Offset>(
-                                begin: const Offset(0, 0.3),
-                                end: Offset.zero,
-                              ).animate(anim),
-                              child: child,
+                                const SizedBox(height: 10),
+                                _buildCurrentPlayerIndicator(gameState, loc),
+                                const SizedBox(height: 10),
+                                // Доска занимает всё оставшееся место
+                                Expanded(
+                                  child: Center(
+                                    child: BoardWidget(
+                                      board: gameState.board,
+                                      validMoves: gameState.validMoves,
+                                      showValidMoves: gameState.showValidMoves,
+                                      onCellTap: (row, col) =>
+                                          _handleCellTap(context, gameState, row, col),
+                                      boardTheme: gameState.boardTheme,
+                                      lastAIMove: gameState.lastAIMove,
+                                      isAIThinking: gameState.isProcessing &&
+                                          gameState.currentPlayer == Player.white &&
+                                          gameState.gameMode == GameMode.vsAI,
+                                      explosionCell: gameState.explosionCell,
+                                      lastMoveCell: gameState.lastMoveCell,
+                                      gameId: gameState.gameId,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          child: _activeBanner(gameState, loc),
                         ),
-                      ),
-                    ),
 
-                    // ── Рекламный баннер Google AdMob ───────────────────────
-                    const AdBannerWidget(height: 52),
-                  ],
-                );
-              }),
-            ),
+                        // ── Нижняя зона ФИКСИРОВАННОЙ высоты — баннеры ─────────
+                        // Высота не меняется → доска не прыгает
+                        SizedBox(
+                          height: 56,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 350),
+                              transitionBuilder: (child, anim) => FadeTransition(
+                                opacity: anim,
+                                child: SlideTransition(
+                                  position: Tween<Offset>(
+                                    begin: const Offset(0, 0.3),
+                                    end: Offset.zero,
+                                  ).animate(anim),
+                                  child: child,
+                                ),
+                              ),
+                              child: _activeBanner(gameState, loc),
+                            ),
+                          ),
+                        ),
+
+                        // ── Рекламный баннер Google AdMob ───────────────────────
+                        const AdBannerWidget(height: 52),
+                      ],
+                    );
+                  }),
+                ),
+              ],
+            ), // Stack
           ),
         );
       },

@@ -11,8 +11,9 @@ class CellWidget extends StatefulWidget {
   final Color boardColor;
   final Color gridLineColor;
   final Color hintColor;
-  final bool isAITarget;    // ← клетка куда собирается / походил ИИ
-  final bool isAIThinking;  // ← ИИ ещё не сделал ход (мигающий контур)
+  final bool isAITarget;
+  final bool isAIThinking;
+  final Duration flipDelay; // ← задержка для эффекта веера
 
   const CellWidget({
     Key? key,
@@ -25,6 +26,7 @@ class CellWidget extends StatefulWidget {
     this.hintColor = GameConstants.validMoveColor,
     this.isAITarget = false,
     this.isAIThinking = false,
+    this.flipDelay = Duration.zero, // ← по умолчанию без задержки
   }) : super(key: key);
 
   @override
@@ -38,7 +40,8 @@ class _CellWidgetState extends State<CellWidget>
   late AnimationController _pieceCtrl;
   late Animation<double> _flipAnim;
   late Animation<double> _scaleAnim;
-  Player? _previousPlayer;
+  Player? _previousPlayer;  // цвет ДО хода
+  Player? _displayPlayer;   // что реально рисуется прямо сейчас
   bool _isFlipping = false;
 
   // ── Анимация провала люка ────────────────────────────────────────────────
@@ -68,11 +71,11 @@ class _CellWidgetState extends State<CellWidget>
 
     // Фишка
     _pieceCtrl = AnimationController(
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 400),
       vsync: this,
     );
     _flipAnim = Tween<double>(begin: 0, end: math.pi).animate(
-      CurvedAnimation(parent: _pieceCtrl, curve: Curves.easeInOut),
+      CurvedAnimation(parent: _pieceCtrl, curve: Curves.easeInOutCubic),
     );
     _scaleAnim = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _pieceCtrl, curve: Curves.elasticOut),
@@ -116,7 +119,7 @@ class _CellWidgetState extends State<CellWidget>
 
     // Взрыв
     _explosionCtrl = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 700),
       vsync: this,
     );
     _explosionScale = Tween<double>(begin: 0.5, end: 2.2).animate(
@@ -131,7 +134,7 @@ class _CellWidgetState extends State<CellWidget>
 
     // Подсветка ИИ
     _aiGlowCtrl = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 600),
       vsync: this,
     )..repeat(reverse: true);
     _aiGlowAnim = Tween<double>(begin: 0.3, end: 1.0).animate(
@@ -139,6 +142,7 @@ class _CellWidgetState extends State<CellWidget>
     );
 
     _previousPlayer = widget.cell.player;
+    _displayPlayer = widget.cell.player;
     if (!widget.cell.isEmpty) _pieceCtrl.value = 1.0;
   }
 
@@ -160,18 +164,32 @@ class _CellWidgetState extends State<CellWidget>
     }
 
     // ── Изменение фишки ───────────────────────────────────────────────────
-    // ВАЖНО: Cell — мутируемый объект, oldWidget.cell IS widget.cell.
-    // Поэтому сравниваем с _previousPlayer, который хранит старое значение.
     if (_previousPlayer != widget.cell.player && !widget.cell.isEmpty) {
       if (!_wasTrapdoor) {
         if (_previousPlayer == Player.none) {
-          // Новая фишка — анимация появления (scale)
+          // Новая фишка — анимация появления
           _isFlipping = false;
+          _displayPlayer = widget.cell.player;
           _pieceCtrl.forward(from: 0.0);
         } else {
-          // Переворот — 3D анимация
+          // Переворот — запоминаем старый цвет, показываем его до старта анимации
           _isFlipping = true;
-          _pieceCtrl.forward(from: 0.0);
+          final oldPlayer = _previousPlayer;
+          final newPlayer = widget.cell.player;
+          _displayPlayer = oldPlayer; // пока не началась анимация — старый цвет
+
+          if (widget.flipDelay == Duration.zero) {
+            _pieceCtrl.forward(from: 0.0);
+          } else {
+            Future.delayed(widget.flipDelay, () {
+              if (mounted) {
+                setState(() => _displayPlayer = oldPlayer);
+                _pieceCtrl.forward(from: 0.0).then((_) {
+                  if (mounted) setState(() => _displayPlayer = newPlayer);
+                });
+              }
+            });
+          }
         }
       }
       _previousPlayer = widget.cell.player;
@@ -265,6 +283,10 @@ class _CellWidgetState extends State<CellWidget>
                   // Фишка
                   if (!widget.cell.isEmpty)
                     Center(child: _buildPieceAnimated(isTrapdoor)),
+                  // Фишка ждёт своей очереди (показываем старый цвет)
+                  if (widget.cell.isEmpty && _displayPlayer != null &&
+                      _displayPlayer != Player.none && !isTrapdoor)
+                    Center(child: _buildPiece(_displayPlayer!)),
 
                   // Вспышка взрыва
                   if (_showExplosion)
@@ -377,24 +399,29 @@ class _CellWidgetState extends State<CellWidget>
     }
 
     if (_isFlipping) {
+      final showNew = _flipAnim.value > math.pi / 2;
+      // Лёгкое сжатие в момент переворота для объёмности
+      final squeeze = 1.0 - 0.12 * math.sin(_flipAnim.value);
       return Transform(
         alignment: Alignment.center,
         transform: Matrix4.identity()
           ..setEntry(3, 2, 0.001)
-          ..rotateY(_flipAnim.value),
+          ..rotateY(_flipAnim.value)
+          ..scale(1.0, squeeze, 1.0),
         child: _buildPiece(
-          _flipAnim.value > math.pi / 2
+          showNew
               ? widget.cell.player
-              : _previousPlayer ?? widget.cell.player,
+              : (_displayPlayer ?? widget.cell.player),
         ),
       );
     }
 
+    // Появление новой фишки
     return Transform.scale(
       scale: _scaleAnim.value,
       child: Transform.rotate(
         angle: (1 - _scaleAnim.value) * 0.5,
-        child: _buildPiece(widget.cell.player),
+        child: _buildPiece(_displayPlayer ?? widget.cell.player),
       ),
     );
   }
@@ -455,7 +482,7 @@ class _CellWidgetState extends State<CellWidget>
   Widget _buildHint() {
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.5, end: 1.0),
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 700),
       curve: Curves.easeInOut,
       builder: (_, v, __) => Transform.scale(
         scale: 0.75 + 0.25 * v,

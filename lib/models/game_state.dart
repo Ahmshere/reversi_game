@@ -18,7 +18,7 @@ class GameState extends ChangeNotifier {
   bool _isProcessing = false;
   bool _showSkipBanner = false;
   late AIPlayer _aiPlayer;
-  BoardTheme _boardTheme = BoardTheme.classic;
+  BoardTheme _boardTheme = BoardTheme.night;
   final AudioService _audio = AudioService();
   AppLanguage _language = AppLanguage.english;
 
@@ -37,6 +37,13 @@ class GameState extends ChangeNotifier {
   // Последний ход ИИ — подсвечивается на доске
   Cell? _lastAIMove;
   Cell? get lastAIMove => _lastAIMove;
+
+  Cell? _lastMoveCell; // последний поставленный ход (для анимации веера)
+  Cell? get lastMoveCell => _lastMoveCell;
+
+  // ID партии — меняется при каждом newGame() для пересоздания CellWidget
+  int _gameId = 0;
+  int get gameId => _gameId;
 
   // Клетка взрыва — board_widget показывает партикл-анимацию
   Cell? _explosionCell;
@@ -95,6 +102,7 @@ class GameState extends ChangeNotifier {
     await Future.delayed(const Duration(milliseconds: 100));
 
     final result = _board.makeMove(row, col);
+    _lastMoveCell = _board.getCell(row, col);
 
     // Звук
     if (result.flippedCells.length > 2 || result.explosiveFlipped.isNotEmpty) {
@@ -259,9 +267,10 @@ class GameState extends ChangeNotifier {
       // Подсвечиваем куда ходит ИИ — показываем 800ms до хода
       _lastAIMove = aiMove;
       notifyListeners();
-      await Future.delayed(const Duration(milliseconds: 1000));
+      await Future.delayed(const Duration(milliseconds: 800));
 
       final result = _board.makeMove(aiMove.row, aiMove.col);
+      _lastMoveCell = _board.getCell(aiMove.row, aiMove.col);
       notifyListeners();
       _audio.playMove();
 
@@ -297,13 +306,6 @@ class GameState extends ChangeNotifier {
       }
 
       if (isGameOver) await _playGameOverSound();
-
-    } else {
-      // ИИ некуда ходить
-      _isProcessing = false;
-      await _showSkipBannerAndSkip();
-      notifyListeners();
-      return;
     }
 
     _lastAIMove = null;
@@ -333,12 +335,14 @@ class GameState extends ChangeNotifier {
     _extraTurn = false;
     _lastTrapdoorCell = null;
     _lastAIMove = null;
+    _lastMoveCell = null;
     _explosionCell = null;
     _modifierBannerText = null;
     _blackFlipped = 0;
     _whiteFlipped = 0;
     _trapdoorDrops = 0;
     _explosionFlips = 0;
+    _gameId++; // ← пересоздаём все CellWidget
     notifyListeners();
   }
 

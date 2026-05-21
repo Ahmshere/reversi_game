@@ -241,7 +241,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
-  BoardTheme _selectedTheme = BoardTheme.classic;
+  BoardTheme _selectedTheme = BoardTheme.night;
   final AudioService _audio = AudioService();
   AppLanguage _language = AppLanguage.english;
 
