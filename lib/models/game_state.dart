@@ -18,7 +18,7 @@ class GameState extends ChangeNotifier {
   bool _isProcessing = false;
   bool _showSkipBanner = false;
   late AIPlayer _aiPlayer;
-  BoardTheme _boardTheme = BoardTheme.night;
+  BoardTheme _boardTheme = BoardTheme.classic;
   final AudioService _audio = AudioService();
   AppLanguage _language = AppLanguage.english;
 
@@ -53,6 +53,15 @@ class GameState extends ChangeNotifier {
   String? _modifierBannerText;
   bool get showModifierBanner => _modifierBannerText != null;
   String get modifierBannerText => _modifierBannerText ?? '';
+
+  // Сигнал тряски доски (взрыв)
+  int _shakeCount = 0;
+  int get shakeCount => _shakeCount;
+
+  void _triggerShake() {
+    _shakeCount++;
+    notifyListeners();
+  }
 
   GameState() {
     _board = Board();
@@ -168,6 +177,8 @@ class GameState extends ChangeNotifier {
       case CellType.explosive:
         _explosionCell = _board.getCell(moveRow, moveCol);
         _showModifierBanner(loc.modifierExplosion);
+        _audio.playExplosion();
+        _triggerShake();
         notifyListeners();
         await Future.delayed(const Duration(milliseconds: 2000));
         _explosionCell = null;
@@ -177,6 +188,7 @@ class GameState extends ChangeNotifier {
       case CellType.bonus:
         _extraTurn = true;
         _showModifierBanner(loc.modifierBonus);
+        _audio.playStar();
         notifyListeners();
         await Future.delayed(const Duration(milliseconds: 1800));
         _modifierBannerText = null;
@@ -211,6 +223,7 @@ class GameState extends ChangeNotifier {
     _lastTrapdoorCell = target;
     target.isTrapdoorFalling = true;
     _showModifierBanner(loc.modifierTrapdoor);
+    _audio.playTrapdoor();
     notifyListeners();
 
     await Future.delayed(const Duration(milliseconds: 1800));
@@ -263,50 +276,57 @@ class GameState extends ChangeNotifier {
 
     Cell? aiMove = await _aiPlayer.getBestMove(_board);
 
-    if (aiMove != null) {
-      // Подсвечиваем куда ходит ИИ — показываем 800ms до хода
-      _lastAIMove = aiMove;
+    if (aiMove == null) {
+      // ИИ не может ходить — пропускаем ход и передаём игроку
+      _lastAIMove = null;
+      _isProcessing = false;
+      await _showSkipBannerAndSkip();
       notifyListeners();
-      await Future.delayed(const Duration(milliseconds: 800));
+      return;
+    }
 
-      final result = _board.makeMove(aiMove.row, aiMove.col);
-      _lastMoveCell = _board.getCell(aiMove.row, aiMove.col);
+    // Подсвечиваем куда ходит ИИ — показываем 800ms до хода
+    _lastAIMove = aiMove;
+    notifyListeners();
+    await Future.delayed(const Duration(milliseconds: 800));
+
+    final result = _board.makeMove(aiMove.row, aiMove.col);
+    _lastMoveCell = _board.getCell(aiMove.row, aiMove.col);
+    notifyListeners();
+    _audio.playMove();
+
+    // ИИ попал на модификатор
+    if (_isModifierMode && result.modifierTriggered != null) {
+      await _handleModifierEffect(result, aiMove.row, aiMove.col);
+    }
+
+    if (_isModifierMode) {
+      _totalMoveCount++;
+      await _checkTrapdoorEvent();
+      _spawnModifiersIfNeeded();
       notifyListeners();
-      _audio.playMove();
+    }
 
-      // ИИ попал на модификатор
-      if (_isModifierMode && result.modifierTriggered != null) {
-        await _handleModifierEffect(result, aiMove.row, aiMove.col);
-      }
-
-      if (_isModifierMode) {
-        _totalMoveCount++;
-        await _checkTrapdoorEvent();
-        _spawnModifiersIfNeeded();
-        notifyListeners();
-      }
-
-      if (!isGameOver && validMoves.isEmpty) {
-        await _showSkipBannerAndSkip();
-        if (currentPlayer == Player.white && !isGameOver) {
-          _isProcessing = false;
-          await _makeAIMove();
-          return;
-        }
-      }
-
-      // Бонус для ИИ: он ходит ещё раз
-      if (_extraTurn) {
-        _extraTurn = false;
-        _board.skipTurn(); // вернуть ход ИИ (белому)
-        notifyListeners();
+    if (!isGameOver && validMoves.isEmpty) {
+      await _showSkipBannerAndSkip();
+      if (currentPlayer == Player.white && !isGameOver) {
         _isProcessing = false;
         await _makeAIMove();
         return;
       }
-
-      if (isGameOver) await _playGameOverSound();
     }
+
+    // Бонус для ИИ: он ходит ещё раз
+    if (_extraTurn) {
+      _extraTurn = false;
+      _board.skipTurn();
+      notifyListeners();
+      _isProcessing = false;
+      await _makeAIMove();
+      return;
+    }
+
+    if (isGameOver) await _playGameOverSound();
 
     _lastAIMove = null;
     _isProcessing = false;
@@ -351,9 +371,13 @@ class GameState extends ChangeNotifier {
     if (w == Player.none) {
       _audio.playDraw();
     } else if (_gameMode == GameMode.vsAI) {
-      if (w == Player.black) _audio.playWin(); else _audio.playLose();
+      if (w == Player.black) {
+        _isModifierMode ? _audio.playFirework() : _audio.playWin();
+      } else {
+        _audio.playLose();
+      }
     } else {
-      _audio.playWin();
+      _isModifierMode ? _audio.playFirework() : _audio.playWin();
     }
     await _saveRecord();
   }

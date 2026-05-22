@@ -48,6 +48,26 @@ class AudioService {
     await _play('sounds/skip.mp3');
   }
 
+  Future<void> playExplosion() async {
+    if (!_soundEnabled) return;
+    await _play('sounds/expl.ogg');
+  }
+
+  Future<void> playTrapdoor() async {
+    if (!_soundEnabled) return;
+    await _play('sounds/trapdoor.ogg');
+  }
+
+  Future<void> playStar() async {
+    if (!_soundEnabled) return;
+    await _play('sounds/star.ogg');
+  }
+
+  Future<void> playFirework() async {
+    if (!_soundEnabled) return;
+    await _play('sounds/firework.ogg');
+  }
+
   Future<void> _play(String assetPath) async {
     try {
       final player = _pool[_poolIndex % _pool.length];

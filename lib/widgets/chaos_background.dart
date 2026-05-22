@@ -279,13 +279,13 @@ class _ChaosBackgroundState extends State<ChaosBackground>
     _time += 0.016;
 
     setState(() {
-      // Двигаем частицы
+      // Двигаем частицы — скорость вдвое меньше
       for (final e in _embers) {
-        e.x += e.vx;
-        e.y += e.vy;
-        e.vy += 0.04; // гравитация (мягкая — камни летят высоко)
-        e.vx += (_rng.nextDouble() - 0.5) * 0.05; // турбулентность
-        e.rotation += e.rotSpeed;
+        e.x += e.vx * 0.5;
+        e.y += e.vy * 0.5;
+        e.vy += 0.02; // гравитация мягче
+        e.vx += (_rng.nextDouble() - 0.5) * 0.025;
+        e.rotation += e.rotSpeed * 0.5;
         // Угасание в верхней части
         if (e.y < size.height * 0.3) {
           e.alpha -= 0.008;

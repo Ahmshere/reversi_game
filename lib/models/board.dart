@@ -26,9 +26,9 @@ class Board {
   void _initializeBoard() {
     cells = List.generate(
       GameConstants.boardSize,
-      (row) => List.generate(
+          (row) => List.generate(
         GameConstants.boardSize,
-        (col) => Cell(row: row, col: col),
+            (col) => Cell(row: row, col: col),
       ),
     );
 
@@ -182,12 +182,15 @@ class Board {
     while (_isInBounds(currentRow, currentCol)) {
       Cell currentCell = cells[currentRow][currentCol];
 
-      // Пустые или заблокированные клетки — нельзя захватить через них
-      if (currentCell.isEmpty || currentCell.cellType == CellType.blocked) {
+      // Пустые клетки прерывают путь
+      if (currentCell.isEmpty) {
         return [];
       } else if (currentCell.player == opponent) {
+        // Фишка противника — добавляем к перевороту
+        // (cellType не важен — фишки с модификаторами тоже переворачиваются)
         cellsToFlip.add(currentCell);
       } else {
+        // Своя фишка — путь замкнут, возвращаем накопленное
         return cellsToFlip;
       }
 
@@ -199,9 +202,9 @@ class Board {
 
   bool _isInBounds(int row, int col) =>
       row >= 0 &&
-      row < GameConstants.boardSize &&
-      col >= 0 &&
-      col < GameConstants.boardSize;
+          row < GameConstants.boardSize &&
+          col >= 0 &&
+          col < GameConstants.boardSize;
 
   bool _isCorner(int row, int col) {
     final s = GameConstants.boardSize - 1;

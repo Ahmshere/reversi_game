@@ -29,6 +29,10 @@ flutter:
     - assets/sounds/lose.mp3
     - assets/sounds/draw.mp3
     - assets/sounds/skip.mp3
+    - assets/sounds/expl.ogg
+    - assets/sounds/trapdoor.ogg
+    - assets/sounds/star.ogg
+    - assets/sounds/firework.ogg
 
 flutter_launcher_icons:
   android: true

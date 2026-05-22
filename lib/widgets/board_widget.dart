@@ -132,7 +132,8 @@ class BoardWidget extends StatefulWidget {
   final bool isAIThinking;
   final Cell? explosionCell;
   final Cell? lastMoveCell;
-  final int gameId; // ← для пересоздания CellWidget при новой игре
+  final int gameId;
+  final bool isModifierMode; // ← передаём в CellWidget
 
   const BoardWidget({
     Key? key,
@@ -146,6 +147,7 @@ class BoardWidget extends StatefulWidget {
     this.explosionCell,
     this.lastMoveCell,
     this.gameId = 0,
+    this.isModifierMode = false,
   }) : super(key: key);
 
   @override
@@ -275,12 +277,16 @@ class _BoardWidgetState extends State<BoardWidget>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: themeData.gridLineColor,
+                    color: widget.isModifierMode
+                        ? themeData.gridLineColor.withOpacity(0.55)
+                        : themeData.gridLineColor,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 10,
+                        color: widget.isModifierMode
+                            ? const Color(0xFFFF4400).withOpacity(0.25)
+                            : Colors.black.withOpacity(0.3),
+                        blurRadius: widget.isModifierMode ? 20 : 10,
                         offset: const Offset(0, 5),
                       ),
                     ],
@@ -313,6 +319,7 @@ class _BoardWidgetState extends State<BoardWidget>
                         hintColor: themeData.hintColor,
                         isAITarget: isAITarget,
                         isAIThinking: widget.isAIThinking && isAITarget,
+                        isModifierMode: widget.isModifierMode,
                       );
                     },
                   ),

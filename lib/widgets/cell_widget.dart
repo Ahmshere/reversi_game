@@ -11,9 +11,9 @@ class CellWidget extends StatefulWidget {
   final Color boardColor;
   final Color gridLineColor;
   final Color hintColor;
-  final bool isAITarget;
-  final bool isAIThinking;
-  final Duration flipDelay; // ← задержка для эффекта веера
+  final bool isAITarget;    // ← клетка куда собирается / походил ИИ
+  final bool isAIThinking;  // ← ИИ ещё не сделал ход (мигающий контур)
+  final bool isModifierMode; // ← Chaos режим — полупрозрачный фон
 
   const CellWidget({
     Key? key,
@@ -26,7 +26,7 @@ class CellWidget extends StatefulWidget {
     this.hintColor = GameConstants.validMoveColor,
     this.isAITarget = false,
     this.isAIThinking = false,
-    this.flipDelay = Duration.zero, // ← по умолчанию без задержки
+    this.isModifierMode = false,
   }) : super(key: key);
 
   @override
@@ -40,8 +40,7 @@ class _CellWidgetState extends State<CellWidget>
   late AnimationController _pieceCtrl;
   late Animation<double> _flipAnim;
   late Animation<double> _scaleAnim;
-  Player? _previousPlayer;  // цвет ДО хода
-  Player? _displayPlayer;   // что реально рисуется прямо сейчас
+  Player? _previousPlayer;
   bool _isFlipping = false;
 
   // ── Анимация провала люка ────────────────────────────────────────────────
@@ -71,11 +70,11 @@ class _CellWidgetState extends State<CellWidget>
 
     // Фишка
     _pieceCtrl = AnimationController(
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 500),
       vsync: this,
     );
     _flipAnim = Tween<double>(begin: 0, end: math.pi).animate(
-      CurvedAnimation(parent: _pieceCtrl, curve: Curves.easeInOutCubic),
+      CurvedAnimation(parent: _pieceCtrl, curve: Curves.easeInOut),
     );
     _scaleAnim = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _pieceCtrl, curve: Curves.elasticOut),
@@ -142,7 +141,6 @@ class _CellWidgetState extends State<CellWidget>
     );
 
     _previousPlayer = widget.cell.player;
-    _displayPlayer = widget.cell.player;
     if (!widget.cell.isEmpty) _pieceCtrl.value = 1.0;
   }
 
@@ -164,32 +162,18 @@ class _CellWidgetState extends State<CellWidget>
     }
 
     // ── Изменение фишки ───────────────────────────────────────────────────
+    // ВАЖНО: Cell — мутируемый объект, oldWidget.cell IS widget.cell.
+    // Поэтому сравниваем с _previousPlayer, который хранит старое значение.
     if (_previousPlayer != widget.cell.player && !widget.cell.isEmpty) {
       if (!_wasTrapdoor) {
         if (_previousPlayer == Player.none) {
-          // Новая фишка — анимация появления
+          // Новая фишка — анимация появления (scale)
           _isFlipping = false;
-          _displayPlayer = widget.cell.player;
           _pieceCtrl.forward(from: 0.0);
         } else {
-          // Переворот — запоминаем старый цвет, показываем его до старта анимации
+          // Переворот — 3D анимация
           _isFlipping = true;
-          final oldPlayer = _previousPlayer;
-          final newPlayer = widget.cell.player;
-          _displayPlayer = oldPlayer; // пока не началась анимация — старый цвет
-
-          if (widget.flipDelay == Duration.zero) {
-            _pieceCtrl.forward(from: 0.0);
-          } else {
-            Future.delayed(widget.flipDelay, () {
-              if (mounted) {
-                setState(() => _displayPlayer = oldPlayer);
-                _pieceCtrl.forward(from: 0.0).then((_) {
-                  if (mounted) setState(() => _displayPlayer = newPlayer);
-                });
-              }
-            });
-          }
+          _pieceCtrl.forward(from: 0.0);
         }
       }
       _previousPlayer = widget.cell.player;
@@ -233,7 +217,9 @@ class _CellWidgetState extends State<CellWidget>
           return Container(
             margin: const EdgeInsets.all(GameConstants.cellPadding),
             decoration: BoxDecoration(
-              color: _cellBg(modifier, isTrapdoor),
+              color: widget.isModifierMode && modifier == CellType.normal
+                  ? widget.boardColor.withOpacity(0.72)
+                  : _cellBg(modifier, isTrapdoor),
               borderRadius: BorderRadius.circular(GameConstants.borderRadius),
               // Подсветка ИИ — мигающий цветной контур
               border: widget.isAITarget
@@ -283,10 +269,6 @@ class _CellWidgetState extends State<CellWidget>
                   // Фишка
                   if (!widget.cell.isEmpty)
                     Center(child: _buildPieceAnimated(isTrapdoor)),
-                  // Фишка ждёт своей очереди (показываем старый цвет)
-                  if (widget.cell.isEmpty && _displayPlayer != null &&
-                      _displayPlayer != Player.none && !isTrapdoor)
-                    Center(child: _buildPiece(_displayPlayer!)),
 
                   // Вспышка взрыва
                   if (_showExplosion)
@@ -399,29 +381,24 @@ class _CellWidgetState extends State<CellWidget>
     }
 
     if (_isFlipping) {
-      final showNew = _flipAnim.value > math.pi / 2;
-      // Лёгкое сжатие в момент переворота для объёмности
-      final squeeze = 1.0 - 0.12 * math.sin(_flipAnim.value);
       return Transform(
         alignment: Alignment.center,
         transform: Matrix4.identity()
           ..setEntry(3, 2, 0.001)
-          ..rotateY(_flipAnim.value)
-          ..scale(1.0, squeeze, 1.0),
+          ..rotateY(_flipAnim.value),
         child: _buildPiece(
-          showNew
+          _flipAnim.value > math.pi / 2
               ? widget.cell.player
-              : (_displayPlayer ?? widget.cell.player),
+              : _previousPlayer ?? widget.cell.player,
         ),
       );
     }
 
-    // Появление новой фишки
     return Transform.scale(
       scale: _scaleAnim.value,
       child: Transform.rotate(
         angle: (1 - _scaleAnim.value) * 0.5,
-        child: _buildPiece(_displayPlayer ?? widget.cell.player),
+        child: _buildPiece(widget.cell.player),
       ),
     );
   }
@@ -548,6 +525,15 @@ class _CellWidgetState extends State<CellWidget>
   // ── Цвета клетки ─────────────────────────────────────────────────────────
   Color _cellBg(CellType type, bool isTrapdoor) {
     if (isTrapdoor) return const Color(0xFF0A0A0A);
+    if (widget.isModifierMode && type != CellType.normal) {
+      // В Chaos режиме — полупрозрачный фон чтобы видеть огненный задник
+      switch (type) {
+        case CellType.blocked:   return Colors.black.withOpacity(0.55);
+        case CellType.explosive: return const Color(0xFFFF3000).withOpacity(0.30);
+        case CellType.bonus:     return const Color(0xFFFFAA00).withOpacity(0.25);
+        case CellType.normal:    return widget.boardColor;
+      }
+    }
     switch (type) {
       case CellType.blocked:   return const Color(0xFF1A1A1A);
       case CellType.explosive: return const Color(0xFF4A1500);

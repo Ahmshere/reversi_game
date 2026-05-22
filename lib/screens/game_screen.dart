@@ -22,7 +22,7 @@ class GameScreen extends StatelessWidget {
   const GameScreen({
     Key? key,
     required this.gameMode,
-    this.initialTheme = BoardTheme.night,
+    this.initialTheme = BoardTheme.classic,
     this.initialLanguage = AppLanguage.english,
     this.isModifierMode = false,
     this.onLanguageChanged,
@@ -162,20 +162,24 @@ class _GameScreenContentState extends State<_GameScreenContent> {
                                 // Доска занимает всё оставшееся место
                                 Expanded(
                                   child: Center(
-                                    child: BoardWidget(
-                                      board: gameState.board,
-                                      validMoves: gameState.validMoves,
-                                      showValidMoves: gameState.showValidMoves,
-                                      onCellTap: (row, col) =>
-                                          _handleCellTap(context, gameState, row, col),
-                                      boardTheme: gameState.boardTheme,
-                                      lastAIMove: gameState.lastAIMove,
-                                      isAIThinking: gameState.isProcessing &&
-                                          gameState.currentPlayer == Player.white &&
-                                          gameState.gameMode == GameMode.vsAI,
-                                      explosionCell: gameState.explosionCell,
-                                      lastMoveCell: gameState.lastMoveCell,
-                                      gameId: gameState.gameId,
+                                    child: _ShakeWidget(
+                                      shakeKey: gameState.shakeCount,
+                                      child: BoardWidget(
+                                        board: gameState.board,
+                                        validMoves: gameState.validMoves,
+                                        showValidMoves: gameState.showValidMoves,
+                                        onCellTap: (row, col) =>
+                                            _handleCellTap(context, gameState, row, col),
+                                        boardTheme: gameState.boardTheme,
+                                        lastAIMove: gameState.lastAIMove,
+                                        isAIThinking: gameState.isProcessing &&
+                                            gameState.currentPlayer == Player.white &&
+                                            gameState.gameMode == GameMode.vsAI,
+                                        explosionCell: gameState.explosionCell,
+                                        lastMoveCell: gameState.lastMoveCell,
+                                        gameId: gameState.gameId,
+                                        isModifierMode: gameState.isModifierMode,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -902,6 +906,70 @@ class _GameOverDialogState extends State<_GameOverDialog>
                   fontWeight: FontWeight.w800)),
         ],
       ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Виджет тряски доски при взрыве
+// ══════════════════════════════════════════════════════════════════════════════
+class _ShakeWidget extends StatefulWidget {
+  final Widget child;
+  final int shakeKey; // меняется → запускает тряску
+
+  const _ShakeWidget({required this.child, required this.shakeKey});
+
+  @override
+  State<_ShakeWidget> createState() => _ShakeWidgetState();
+}
+
+class _ShakeWidgetState extends State<_ShakeWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _shakeAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _shakeAnim = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut),
+    );
+  }
+
+  @override
+  void didUpdateWidget(_ShakeWidget old) {
+    super.didUpdateWidget(old);
+    if (old.shakeKey != widget.shakeKey) {
+      _ctrl.forward(from: 0.0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (_, child) {
+        final progress = _ctrl.value;
+        // Убываюшая синусоида — 4 колебания
+        final offset = progress < 1.0
+            ? 8.0 * math.sin(progress * math.pi * 4) * (1 - progress)
+            : 0.0;
+        return Transform.translate(
+          offset: Offset(offset, offset * 0.4),
+          child: child,
+        );
+      },
+      child: widget.child,
     );
   }
 }
