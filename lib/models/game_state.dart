@@ -8,6 +8,27 @@ import '../utils/ai_player.dart';
 import '../utils/board_theme.dart';
 import '../utils/audio_service.dart';
 import '../utils/app_localizations.dart';
+import '../utils/settings_service.dart';
+import '../utils/achievements.dart';
+
+/// Снимок GameState для одной отменяемой полу-хода (используется в Undo).
+class _MoveSnapshot {
+  final BoardSnapshot board;
+  final int totalMoveCount;
+  final int blackFlipped;
+  final int whiteFlipped;
+  final int trapdoorDrops;
+  final int explosionFlips;
+
+  const _MoveSnapshot({
+    required this.board,
+    required this.totalMoveCount,
+    required this.blackFlipped,
+    required this.whiteFlipped,
+    required this.trapdoorDrops,
+    required this.explosionFlips,
+  });
+}
 
 enum GameMode { vsPlayer, vsAI }
 
@@ -34,6 +55,10 @@ class GameState extends ChangeNotifier {
   int _trapdoorDrops = 0;  // фишек провалилось
   int _explosionFlips = 0; // перевёрнуто взрывами
 
+  // Достижения, разблокированные только что сыгранной партией
+  List<Achievement> _newlyUnlockedAchievements = [];
+  List<Achievement> get newlyUnlockedAchievements => _newlyUnlockedAchievements;
+
   // Последний ход ИИ — подсвечивается на доске
   Cell? _lastAIMove;
   Cell? get lastAIMove => _lastAIMove;
@@ -49,6 +74,10 @@ class GameState extends ChangeNotifier {
   Cell? _explosionCell;
   Cell? get explosionCell => _explosionCell;
 
+  // Клетка сработавшего бонуса — cell_widget показывает вспышку-салют
+  Cell? _bonusCell;
+  Cell? get bonusCell => _bonusCell;
+
   // Показывать баннер о сработавшем модификаторе
   String? _modifierBannerText;
   bool get showModifierBanner => _modifierBannerText != null;
@@ -63,9 +92,20 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── История ходов (Undo) ────────────────────────────────────────────────
+  final List<_MoveSnapshot> _history = [];
+  static const int _maxHistory = 40;
+
+  // ── Подсказка лучшего хода ───────────────────────────────────────────────
+  Cell? _hintCell;
+  Cell? get hintCell => _hintCell;
+  int _hintRequestId = 0;
+
   GameState() {
     _board = Board();
-    _aiPlayer = AIPlayer(difficulty: AIDifficulty.medium);
+    _boardTheme = SettingsService().boardTheme;
+    _language = SettingsService().language;
+    _aiPlayer = AIPlayer(difficulty: SettingsService().aiDifficulty);
   }
 
   // ── Геттеры ───────────────────────────────────────────────────────────────
@@ -93,23 +133,103 @@ class GameState extends ChangeNotifier {
   // ── Сеттеры ───────────────────────────────────────────────────────────────
   void setGameMode(GameMode mode) { _gameMode = mode; notifyListeners(); }
   void setModifierMode(bool value) { _isModifierMode = value; notifyListeners(); }
-  void setAIDifficulty(AIDifficulty d) { _aiPlayer = AIPlayer(difficulty: d); notifyListeners(); }
-  void setBoardTheme(BoardTheme t) { _boardTheme = t; notifyListeners(); }
+  void setAIDifficulty(AIDifficulty d) {
+    _aiPlayer = AIPlayer(difficulty: d);
+    SettingsService().setAIDifficulty(d);
+    notifyListeners();
+  }
+  void setBoardTheme(BoardTheme t) {
+    _boardTheme = t;
+    SettingsService().setBoardTheme(t);
+    notifyListeners();
+  }
   void toggleSound() { _audio.setSoundEnabled(!_audio.soundEnabled); notifyListeners(); }
-  void setLanguage(AppLanguage l) { _language = l; notifyListeners(); }
+  void setLanguage(AppLanguage l) {
+    _language = l;
+    SettingsService().setLanguage(l);
+    notifyListeners();
+  }
   void toggleShowValidMoves() { _showValidMoves = !_showValidMoves; notifyListeners(); }
 
   bool isValidMove(int row, int col) => _board.isValidMove(row, col);
+
+  // ── Undo ──────────────────────────────────────────────────────────────────
+
+  /// Можно ли сейчас отменить ход
+  bool get canUndo =>
+      _history.isNotEmpty && !_isProcessing && !isGameOver;
+
+  /// Можно ли сейчас показать подсказку
+  bool get canHint => !_isProcessing && !isGameOver && validMoves.isNotEmpty;
+
+  void _pushHistory() {
+    _history.add(_MoveSnapshot(
+      board: BoardSnapshot.capture(_board),
+      totalMoveCount: _totalMoveCount,
+      blackFlipped: _blackFlipped,
+      whiteFlipped: _whiteFlipped,
+      trapdoorDrops: _trapdoorDrops,
+      explosionFlips: _explosionFlips,
+    ));
+    if (_history.length > _maxHistory) {
+      _history.removeAt(0);
+    }
+  }
+
+  void _applySnapshot(_MoveSnapshot snap) {
+    _board.restoreSnapshot(snap.board);
+    _totalMoveCount = snap.totalMoveCount;
+    _blackFlipped = snap.blackFlipped;
+    _whiteFlipped = snap.whiteFlipped;
+    _trapdoorDrops = snap.trapdoorDrops;
+    _explosionFlips = snap.explosionFlips;
+    _extraTurn = false;
+    _lastAIMove = null;
+    _lastMoveCell = null;
+    _explosionCell = null;
+    _bonusCell = null;
+    _lastTrapdoorCell = null;
+    _modifierBannerText = null;
+    _showSkipBanner = false;
+    _hintCell = null;
+    _hintRequestId++;
+  }
+
+  /// Отменяет последний ход. В режиме против ИИ откатывает сразу ход ИИ
+  /// и предшествующий ему ход игрока — чтобы очередь снова была за игроком.
+  /// В режиме "против игрока" откатывает ровно один последний ход.
+  void undo() {
+    if (!canUndo) return;
+
+    _MoveSnapshot? target;
+    if (_gameMode == GameMode.vsAI) {
+      while (_history.isNotEmpty) {
+        final snap = _history.removeLast();
+        target = snap;
+        if (snap.board.currentPlayer == Player.black) break;
+      }
+    } else {
+      target = _history.removeLast();
+    }
+
+    if (target != null) {
+      _applySnapshot(target);
+      notifyListeners();
+    }
+  }
 
   // ── Логика хода ───────────────────────────────────────────────────────────
   Future<void> makeMove(int row, int col) async {
     if (_isProcessing || !isValidMove(row, col)) return;
 
     _isProcessing = true;
+    _hintCell = null;
+    _hintRequestId++; // отменяем отложенное скрытие предыдущей подсказки
     notifyListeners();
 
     await Future.delayed(const Duration(milliseconds: 100));
 
+    _pushHistory();
     final result = _board.makeMove(row, col);
     _lastMoveCell = _board.getCell(row, col);
 
@@ -187,10 +307,12 @@ class GameState extends ChangeNotifier {
         break;
       case CellType.bonus:
         _extraTurn = true;
+        _bonusCell = _board.getCell(moveRow, moveCol);
         _showModifierBanner(loc.modifierBonus);
         _audio.playStar();
         notifyListeners();
         await Future.delayed(const Duration(milliseconds: 1800));
+        _bonusCell = null;
         _modifierBannerText = null;
         notifyListeners();
         break;
@@ -226,7 +348,12 @@ class GameState extends ChangeNotifier {
     _audio.playTrapdoor();
     notifyListeners();
 
-    await Future.delayed(const Duration(milliseconds: 1800));
+    // Тряска доски именно в момент, когда пол физически проваливается
+    // (после фазы трещин, см. длительность анимации в CellWidget)
+    await Future.delayed(const Duration(milliseconds: 650));
+    _triggerShake();
+
+    await Future.delayed(const Duration(milliseconds: 1350));
 
     // Убираем фишку, клетка становится обычной пустой
     target.player = Player.none;
@@ -276,6 +403,8 @@ class GameState extends ChangeNotifier {
 
     Cell? aiMove = await _aiPlayer.getBestMove(_board);
 
+    _hintCell = null;
+
     if (aiMove == null) {
       // ИИ не может ходить — пропускаем ход и передаём игроку
       _lastAIMove = null;
@@ -290,6 +419,7 @@ class GameState extends ChangeNotifier {
     notifyListeners();
     await Future.delayed(const Duration(milliseconds: 800));
 
+    _pushHistory();
     final result = _board.makeMove(aiMove.row, aiMove.col);
     _lastMoveCell = _board.getCell(aiMove.row, aiMove.col);
     notifyListeners();
@@ -346,6 +476,26 @@ class GameState extends ChangeNotifier {
 
   void skipTurn() { _board.skipTurn(); notifyListeners(); }
 
+  /// Показывает подсказку — лучший ход для текущего игрока.
+  /// Подсказка гаснет сама через несколько секунд или после следующего хода.
+  void showHint() {
+    if (!canHint) return;
+    final move = AIPlayer().suggestBestMove(_board);
+    if (move == null) return;
+
+    _hintCell = move;
+    final requestId = ++_hintRequestId;
+    notifyListeners();
+
+    Future.delayed(const Duration(seconds: 4), () {
+      // Скрываем, только если за это время не появился ход/новая подсказка
+      if (_hintRequestId == requestId) {
+        _hintCell = null;
+        notifyListeners();
+      }
+    });
+  }
+
   void newGame({GameMode? mode}) {
     _board.reset();
     if (mode != null) _gameMode = mode;
@@ -357,11 +507,16 @@ class GameState extends ChangeNotifier {
     _lastAIMove = null;
     _lastMoveCell = null;
     _explosionCell = null;
+    _bonusCell = null;
     _modifierBannerText = null;
     _blackFlipped = 0;
     _whiteFlipped = 0;
     _trapdoorDrops = 0;
     _explosionFlips = 0;
+    _history.clear();
+    _hintCell = null;
+    _hintRequestId++;
+    _newlyUnlockedAchievements = [];
     _gameId++; // ← пересоздаём все CellWidget
     notifyListeners();
   }
@@ -384,6 +539,8 @@ class GameState extends ChangeNotifier {
 
   Future<void> _saveRecord() async {
     final w = winner;
+    final beforeRecords = List<GameRecord>.from(StatsRepository().records);
+
     await StatsRepository().add(GameRecord(
       dateTime: DateTime.now(),
       mode: _isModifierMode ? 'chaos' : 'classic',
@@ -400,7 +557,16 @@ class GameState extends ChangeNotifier {
       whiteFlipped: _whiteFlipped,
       trapdoorDrops: _trapdoorDrops,
       explosionFlips: _explosionFlips,
+      difficulty: _gameMode == GameMode.vsAI ? _aiPlayer.difficulty.name : null,
     ));
+
+    _newlyUnlockedAchievements = Achievements.newlyUnlocked(
+      beforeRecords,
+      StatsRepository().records,
+    );
+    if (_newlyUnlockedAchievements.isNotEmpty) {
+      notifyListeners();
+    }
   }
 
   String getWinnerText() {

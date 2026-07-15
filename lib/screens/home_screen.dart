@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import '../models/game_state.dart';
 import 'game_stats.dart';
+import 'achievements_screen.dart';
 import '../utils/constants.dart';
 import '../utils/board_theme.dart';
 import '../utils/audio_service.dart';
 import '../utils/app_localizations.dart';
+import '../utils/settings_service.dart';
 import '../version.dart';
 import 'game_screen.dart';
 import 'mode_select_screen.dart';
@@ -241,9 +243,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
-  BoardTheme _selectedTheme = BoardTheme.night;
+  BoardTheme _selectedTheme = SettingsService().boardTheme;
   final AudioService _audio = AudioService();
-  AppLanguage _language = AppLanguage.english;
+  AppLanguage _language = SettingsService().language;
 
   late Ticker _ticker;
   double _time = 0.0;
@@ -389,6 +391,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        IconButton(
+                          icon: const Icon(Icons.emoji_events_outlined,
+                              color: Colors.white54, size: 26),
+                          onPressed: () => _showAchievements(context),
+                          tooltip: _loc.achievementsTitle,
+                        ),
                         IconButton(
                           icon: const Icon(Icons.bar_chart_rounded,
                               color: Colors.white54, size: 26),
@@ -797,6 +805,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+  // ── Язык — общий обработчик, сразу сохраняет выбор ────────────────────────
+  void _onLanguageChanged(AppLanguage lang) {
+    setState(() => _language = lang);
+    SettingsService().setLanguage(lang);
+  }
+
   // ── Навигация (классический режим) ───────────────────────────────────────
   void _startGame(BuildContext context, GameMode mode) {
     Navigator.push(
@@ -807,7 +821,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           initialTheme: _selectedTheme,
           initialLanguage: _language,
           isModifierMode: false,
-          onLanguageChanged: (lang) => setState(() => _language = lang),
+          onLanguageChanged: _onLanguageChanged,
         ),
       ),
     );
@@ -887,7 +901,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         builder: (_) => ModeSelectScreen(
           initialTheme: _selectedTheme,
           initialLanguage: _language,
-          onLanguageChanged: (lang) => setState(() => _language = lang),
+          onLanguageChanged: _onLanguageChanged,
         ),
       ),
     );
@@ -909,11 +923,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             currentLanguage: _language,
             onLanguageChanged: (lang) {
               setModalState(() => _language = lang);
-              setState(() => _language = lang);
+              _onLanguageChanged(lang);
             },
             onThemeChanged: (theme) {
               setState(() => _selectedTheme = theme);
+              SettingsService().setBoardTheme(theme);
               Navigator.pop(context);
+            },
+            currentDifficulty: SettingsService().aiDifficulty,
+            onDifficultyChanged: (d) {
+              setModalState(() {});
+              SettingsService().setAIDifficulty(d);
             },
             loc: _loc,
           ),
@@ -927,6 +947,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       context,
       MaterialPageRoute(
         builder: (_) => StatsScreen(loc: _loc),
+      ),
+    );
+  }
+
+  void _showAchievements(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AchievementsScreen(loc: _loc),
       ),
     );
   }

@@ -14,6 +14,7 @@ class GameRecord {
   final int whiteFlipped;
   final int trapdoorDrops;
   final int explosionFlips;
+  final String? difficulty; // 'easy' | 'medium' | 'hard' | null (если opponent == 'player')
 
   const GameRecord({
     required this.dateTime,
@@ -27,6 +28,7 @@ class GameRecord {
     required this.whiteFlipped,
     this.trapdoorDrops = 0,
     this.explosionFlips = 0,
+    this.difficulty,
   });
 
   Map<String, dynamic> toJson() => {
@@ -41,6 +43,7 @@ class GameRecord {
     'whiteFlipped': whiteFlipped,
     'trapdoorDrops': trapdoorDrops,
     'explosionFlips': explosionFlips,
+    'difficulty': difficulty,
   };
 
   factory GameRecord.fromJson(Map<String, dynamic> j) => GameRecord(
@@ -55,6 +58,7 @@ class GameRecord {
     whiteFlipped: j['whiteFlipped'] as int,
     trapdoorDrops: (j['trapdoorDrops'] as int?) ?? 0,
     explosionFlips: (j['explosionFlips'] as int?) ?? 0,
+    difficulty: j['difficulty'] as String?,
   );
 }
 

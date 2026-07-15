@@ -14,6 +14,9 @@ class CellWidget extends StatefulWidget {
   final bool isAITarget;    // ← клетка куда собирается / походил ИИ
   final bool isAIThinking;  // ← ИИ ещё не сделал ход (мигающий контур)
   final bool isModifierMode; // ← Chaos режим — полупрозрачный фон
+  final bool isSuggested;   // ← клетка с подсказкой "лучший ход"
+  final bool isExplosionNeighbor; // ← фишка перевёрнута взрывом соседней клетки
+  final bool isBonusTriggered;    // ← на этой клетке только что сработал бонус
 
   const CellWidget({
     Key? key,
@@ -27,6 +30,9 @@ class CellWidget extends StatefulWidget {
     this.isAITarget = false,
     this.isAIThinking = false,
     this.isModifierMode = false,
+    this.isSuggested = false,
+    this.isExplosionNeighbor = false,
+    this.isBonusTriggered = false,
   }) : super(key: key);
 
   @override
@@ -50,6 +56,8 @@ class _CellWidgetState extends State<CellWidget>
   late Animation<double> _trapdoorScale;  // сжимается
   late Animation<double> _crackAnim;      // трещины раскрываются
   late Animation<double> _pitAnim;        // яма появляется
+  late Animation<double> _dustAnim;       // всплеск пыли/обломков
+  List<_DustParticle> _dustParticles = [];
 
   // ── Анимация взрыва ──────────────────────────────────────────────────────
   late AnimationController _explosionCtrl;
@@ -60,6 +68,13 @@ class _CellWidgetState extends State<CellWidget>
   // ── Анимация подсветки ИИ ────────────────────────────────────────────────
   late AnimationController _aiGlowCtrl;
   late Animation<double> _aiGlowAnim;
+
+  // ── Анимация салюта бонуса ────────────────────────────────────────────────
+  late AnimationController _bonusCtrl;
+  late Animation<double> _bonusScale;
+  late Animation<double> _bonusFade;
+  bool _showBonusBurst = false;
+  List<double> _bonusSparkleAngles = [];
 
   // ── Состояние ────────────────────────────────────────────────────────────
   bool _wasTrapdoor = false;
@@ -80,54 +95,62 @@ class _CellWidgetState extends State<CellWidget>
       CurvedAnimation(parent: _pieceCtrl, curve: Curves.elasticOut),
     );
 
-    // Провал
+    // Провал — увеличенная длительность даёт время на "тряску" перед
+    // разломом, сам разлом, всплеск пыли и падение фишки в яму.
     _trapdoorCtrl = AnimationController(
-      duration: const Duration(milliseconds: 1600),
+      duration: const Duration(milliseconds: 2000),
       vsync: this,
     );
     _crackAnim = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: _trapdoorCtrl,
-        curve: const Interval(0.0, 0.35, curve: Curves.easeOut),
+        curve: const Interval(0.0, 0.28, curve: Curves.easeOut),
       ),
     );
-    _trapdoorY = Tween<double>(begin: 0, end: 50).animate(
+    _dustAnim = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: _trapdoorCtrl,
-        curve: const Interval(0.3, 0.75, curve: Curves.easeIn),
+        curve: const Interval(0.22, 0.55, curve: Curves.easeOut),
+      ),
+    );
+    _trapdoorY = Tween<double>(begin: 0, end: 54).animate(
+      CurvedAnimation(
+        parent: _trapdoorCtrl,
+        curve: const Interval(0.32, 0.78, curve: Curves.easeIn),
       ),
     );
     _trapdoorFade = Tween<double>(begin: 1, end: 0).animate(
       CurvedAnimation(
         parent: _trapdoorCtrl,
-        curve: const Interval(0.45, 0.80, curve: Curves.easeIn),
+        curve: const Interval(0.5, 0.82, curve: Curves.easeIn),
       ),
     );
     _trapdoorScale = Tween<double>(begin: 1, end: 0.3).animate(
       CurvedAnimation(
         parent: _trapdoorCtrl,
-        curve: const Interval(0.3, 0.75, curve: Curves.easeIn),
+        curve: const Interval(0.32, 0.78, curve: Curves.easeIn),
       ),
     );
     _pitAnim = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: _trapdoorCtrl,
-        curve: const Interval(0.6, 1.0, curve: Curves.easeOut),
+        curve: const Interval(0.55, 1.0, curve: Curves.easeOut),
       ),
     );
+    _dustParticles = _generateDustParticles();
 
     // Взрыв
     _explosionCtrl = AnimationController(
-      duration: const Duration(milliseconds: 700),
+      duration: const Duration(milliseconds: 850),
       vsync: this,
     );
-    _explosionScale = Tween<double>(begin: 0.5, end: 2.2).animate(
+    _explosionScale = Tween<double>(begin: 0.4, end: 2.6).animate(
       CurvedAnimation(parent: _explosionCtrl, curve: Curves.easeOut),
     );
     _explosionFade = Tween<double>(begin: 1, end: 0).animate(
       CurvedAnimation(
         parent: _explosionCtrl,
-        curve: const Interval(0.4, 1.0, curve: Curves.easeIn),
+        curve: const Interval(0.35, 1.0, curve: Curves.easeIn),
       ),
     );
 
@@ -138,6 +161,24 @@ class _CellWidgetState extends State<CellWidget>
     )..repeat(reverse: true);
     _aiGlowAnim = Tween<double>(begin: 0.3, end: 1.0).animate(
       CurvedAnimation(parent: _aiGlowCtrl, curve: Curves.easeInOut),
+    );
+
+    // Салют бонуса
+    _bonusCtrl = AnimationController(
+      duration: const Duration(milliseconds: 900),
+      vsync: this,
+    );
+    _bonusScale = Tween<double>(begin: 0.3, end: 1.8).animate(
+      CurvedAnimation(parent: _bonusCtrl, curve: Curves.easeOut),
+    );
+    _bonusFade = Tween<double>(begin: 1, end: 0).animate(
+      CurvedAnimation(
+        parent: _bonusCtrl,
+        curve: const Interval(0.3, 1.0, curve: Curves.easeIn),
+      ),
+    );
+    _bonusSparkleAngles = List.generate(
+      8, (i) => (i / 8) * math.pi * 2 + math.Random().nextDouble() * 0.3,
     );
 
     _previousPlayer = widget.cell.player;
@@ -184,6 +225,29 @@ class _CellWidgetState extends State<CellWidget>
       _previousPlayer = Player.none;
       _pieceCtrl.reset();
     }
+
+    // ── Эта клетка попала под взрыв соседней взрывной клетки ───────────────
+    if (!oldWidget.isExplosionNeighbor && widget.isExplosionNeighbor) {
+      _triggerExplosionFlash();
+    }
+
+    // ── На этой клетке только что сработал бонус ────────────────────────────
+    if (!oldWidget.isBonusTriggered && widget.isBonusTriggered) {
+      _triggerBonusBurst();
+    }
+  }
+
+  List<_DustParticle> _generateDustParticles() {
+    final rng = math.Random();
+    return List.generate(10, (_) {
+      return _DustParticle(
+        angle: rng.nextDouble() * math.pi * 2,
+        distance: 10 + rng.nextDouble() * 16,
+        size: 2 + rng.nextDouble() * 3.5,
+        riseHeight: 6 + rng.nextDouble() * 10,
+        isDark: rng.nextBool(),
+      );
+    });
   }
 
   void _triggerExplosionFlash() {
@@ -193,12 +257,20 @@ class _CellWidgetState extends State<CellWidget>
     });
   }
 
+  void _triggerBonusBurst() {
+    setState(() => _showBonusBurst = true);
+    _bonusCtrl.forward(from: 0.0).then((_) {
+      if (mounted) setState(() => _showBonusBurst = false);
+    });
+  }
+
   @override
   void dispose() {
     _pieceCtrl.dispose();
     _trapdoorCtrl.dispose();
     _explosionCtrl.dispose();
     _aiGlowCtrl.dispose();
+    _bonusCtrl.dispose();
     super.dispose();
   }
 
@@ -211,7 +283,7 @@ class _CellWidgetState extends State<CellWidget>
       onTap: widget.isValidMove ? widget.onTap : null,
       child: AnimatedBuilder(
         animation: Listenable.merge([
-          _pieceCtrl, _trapdoorCtrl, _explosionCtrl, _aiGlowCtrl,
+          _pieceCtrl, _trapdoorCtrl, _explosionCtrl, _aiGlowCtrl, _bonusCtrl,
         ]),
         builder: (context, _) {
           return Container(
@@ -254,6 +326,10 @@ class _CellWidgetState extends State<CellWidget>
                   if (modifier == CellType.blocked && !isTrapdoor)
                     const Positioned.fill(child: _HatchWidget()),
 
+                  // Трещины перед провалом
+                  if (isTrapdoor && _crackAnim.value > 0 && _pitAnim.value < 1)
+                    _buildCracks(),
+
                   // Яма после провала
                   if (isTrapdoor && _pitAnim.value > 0)
                     _buildPit(),
@@ -262,7 +338,7 @@ class _CellWidgetState extends State<CellWidget>
                   if (widget.cell.isEmpty && modifier != CellType.normal && !isTrapdoor)
                     Center(child: _buildModifierIcon(modifier)),
 
-                  // Подсказка
+                  // Подсказка (точка допустимого хода)
                   if (widget.showHint && !isTrapdoor)
                     Center(child: _buildHint()),
 
@@ -270,9 +346,21 @@ class _CellWidgetState extends State<CellWidget>
                   if (!widget.cell.isEmpty)
                     Center(child: _buildPieceAnimated(isTrapdoor)),
 
+                  // Всплеск пыли и обломков в момент провала
+                  if (isTrapdoor && _dustAnim.value > 0 && _dustAnim.value < 1)
+                    _buildDustBurst(),
+
+                  // Подсказка "лучший ход" (кнопка Hint)
+                  if (widget.isSuggested && !isTrapdoor)
+                    Center(child: _buildSuggestion()),
+
                   // Вспышка взрыва
                   if (_showExplosion)
                     _buildExplosionFlash(),
+
+                  // Салют бонуса
+                  if (_showBonusBurst)
+                    _buildBonusBurst(),
 
                   // Метка «ход ИИ» — маленькая стрелка сверху
                   if (widget.isAITarget && !widget.isAIThinking)
@@ -286,8 +374,40 @@ class _CellWidgetState extends State<CellWidget>
     );
   }
 
+  // ── Трещины (раскрываются перед провалом) ────────────────────────────────
+  Widget _buildCracks() {
+    // Пока пол ещё не стал полноценной ямой — трещины видны отчётливо,
+    // затем гаснут по мере того как яма занимает их место.
+    final opacity = (_crackAnim.value * (1 - _pitAnim.value * 0.7)).clamp(0.0, 1.0);
+    return Positioned.fill(
+      child: Opacity(
+        opacity: opacity,
+        child: CustomPaint(
+          painter: _CrackPainter(progress: _crackAnim.value),
+        ),
+      ),
+    );
+  }
+
+  // ── Всплеск пыли и обломков в момент провала ─────────────────────────────
+  Widget _buildDustBurst() {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: CustomPaint(
+          painter: _DustPainter(
+            progress: _dustAnim.value,
+            particles: _dustParticles,
+          ),
+        ),
+      ),
+    );
+  }
+
   // ── Яма (тёмная дыра с радиальным градиентом) ────────────────────────────
   Widget _buildPit() {
+    // Слабое пульсирующее тлеющее свечение по краю ямы — держит взгляд
+    // на клетке ещё немного после того, как фишка исчезла.
+    final emberPulse = 0.5 + 0.5 * math.sin(_trapdoorCtrl.value * math.pi * 6);
     return Positioned.fill(
       child: Opacity(
         opacity: _pitAnim.value.clamp(0.0, 1.0),
@@ -296,13 +416,18 @@ class _CellWidgetState extends State<CellWidget>
             borderRadius: BorderRadius.circular(GameConstants.borderRadius),
             gradient: RadialGradient(
               center: Alignment.center,
-              radius: 0.8,
+              radius: 0.85,
               colors: [
                 Colors.black,
-                const Color(0xFF1A0A00).withOpacity(0.85),
+                const Color(0xFF150800).withOpacity(0.92),
                 Colors.transparent,
               ],
-              stops: const [0.0, 0.6, 1.0],
+              stops: const [0.0, 0.65, 1.0],
+            ),
+            border: Border.all(
+              color: const Color(0xFFFF6B00)
+                  .withOpacity(0.25 * emberPulse * _pitAnim.value),
+              width: 1.2,
             ),
           ),
           child: Center(
@@ -321,8 +446,17 @@ class _CellWidgetState extends State<CellWidget>
   Widget _buildPieceAnimated(bool isTrapdoor) {
     if (isTrapdoor) {
       // Трещина: клетка как-будто «раскалывается» — два куска расходятся,
-      // фишка проваливается вниз
-      return Stack(
+      // фишка проваливается вниз.
+      // Пока трещина только раскрывается (до начала падения) — фишку
+      // слегка трясёт, чтобы усилить ощущение разрушения пола.
+      final fallProgress = (_trapdoorY.value / 54).clamp(0.0, 1.0);
+      final rumble = _crackAnim.value * (1 - fallProgress);
+      final jitterX = math.sin(_trapdoorCtrl.value * 70) * 2.2 * rumble;
+      final jitterY = math.cos(_trapdoorCtrl.value * 55) * 1.6 * rumble;
+
+      return Transform.translate(
+        offset: Offset(jitterX, jitterY),
+        child: Stack(
         alignment: Alignment.center,
         children: [
           // Левая половина клетки
@@ -377,6 +511,7 @@ class _CellWidgetState extends State<CellWidget>
             ),
           ),
         ],
+        ),
       );
     }
 
@@ -405,27 +540,110 @@ class _CellWidgetState extends State<CellWidget>
 
   // ── Вспышка взрыва ────────────────────────────────────────────────────────
   Widget _buildExplosionFlash() {
+    // Общий прогресс (0..1) — используем и для яркой вспышки фона клетки,
+    // и для расширяющегося огненного кольца, и для самой иконки взрыва.
+    final t = _explosionCtrl.value;
+    final flashOpacity = (1 - t * 3).clamp(0.0, 1.0); // резкая вспышка в начале
+
     return Positioned.fill(
-      child: Transform.scale(
-        scale: _explosionScale.value,
-        child: Opacity(
-          opacity: _explosionFade.value.clamp(0.0, 1.0),
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFFFF6030).withOpacity(0.7),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFFF6030).withOpacity(0.5),
-                  blurRadius: 20,
-                  spreadRadius: 5,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Резкая яркая вспышка всей клетки в первый момент удара
+          if (flashOpacity > 0)
+            Container(color: Colors.white.withOpacity(flashOpacity * 0.85)),
+
+          // Расширяющееся огненное кольцо
+          Opacity(
+            opacity: _explosionFade.value.clamp(0.0, 1.0),
+            child: Transform.scale(
+              scale: _explosionScale.value,
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFFFFCC66).withOpacity(0.8),
+                    width: 2.5,
+                  ),
                 ),
-              ],
-            ),
-            child: const Center(
-              child: Text('💥', style: TextStyle(fontSize: 20)),
+              ),
             ),
           ),
+
+          // Основная вспышка + иконка
+          Opacity(
+            opacity: _explosionFade.value.clamp(0.0, 1.0),
+            child: Transform.scale(
+              scale: _explosionScale.value * 0.75,
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFFFF6030).withOpacity(0.75),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFF6030).withOpacity(0.55),
+                      blurRadius: 22,
+                      spreadRadius: 6,
+                    ),
+                  ],
+                ),
+                child: const Center(
+                  child: Text('💥', style: TextStyle(fontSize: 20)),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Салют бонуса (доп. ход) ──────────────────────────────────────────────
+  Widget _buildBonusBurst() {
+    final fade = _bonusFade.value.clamp(0.0, 1.0);
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Золотое кольцо расширяется наружу
+            Opacity(
+              opacity: fade,
+              child: Transform.scale(
+                scale: _bonusScale.value,
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFFFFCC00).withOpacity(0.8),
+                      width: 2.5,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Искры-звёздочки разлетаются по кругу
+            ..._bonusSparkleAngles.map((angle) {
+              final travel = _bonusScale.value * 16;
+              final dx = math.cos(angle) * travel;
+              final dy = math.sin(angle) * travel;
+              return Opacity(
+                opacity: fade,
+                child: Transform.translate(
+                  offset: Offset(dx, dy),
+                  child: const Text('✨', style: TextStyle(fontSize: 11)),
+                ),
+              );
+            }),
+            // Звезда в центре
+            Opacity(
+              opacity: fade,
+              child: Transform.scale(
+                scale: 0.6 + 0.4 * (1 - fade),
+                child: const Text('⭐', style: TextStyle(fontSize: 22)),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -480,6 +698,37 @@ class _CellWidgetState extends State<CellWidget>
         ),
       ),
       onEnd: () { if (mounted && widget.showHint) setState(() {}); },
+    );
+  }
+
+  // ── Подсказка "лучший ход" ────────────────────────────────────────────────
+  Widget _buildSuggestion() {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.75, end: 1.15),
+      duration: const Duration(milliseconds: 550),
+      curve: Curves.easeInOut,
+      builder: (_, v, __) => Transform.scale(
+        scale: v,
+        child: Container(
+          width: 26,
+          height: 26,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: const Color(0xFFFFD700).withOpacity(0.22),
+            border: Border.all(color: const Color(0xFFFFD700), width: 2.5),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFFFD700).withOpacity(0.6),
+                blurRadius: 12,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: const Icon(Icons.lightbulb_rounded,
+              color: Color(0xFFFFD700), size: 14),
+        ),
+      ),
+      onEnd: () { if (mounted && widget.isSuggested) setState(() {}); },
     );
   }
 
@@ -608,6 +857,95 @@ class _CellWidgetState extends State<CellWidget>
       ),
     );
   }
+}
+
+// ── Частица пыли/обломков при провале пола ──────────────────────────────────
+class _DustParticle {
+  final double angle;      // направление разлёта
+  final double distance;   // на сколько px разлетается
+  final double size;
+  final double riseHeight; // дополнительный подъём вверх перед оседанием
+  final bool isDark;
+
+  const _DustParticle({
+    required this.angle,
+    required this.distance,
+    required this.size,
+    required this.riseHeight,
+    required this.isDark,
+  });
+}
+
+class _DustPainter extends CustomPainter {
+  final double progress; // 0..1
+  final List<_DustParticle> particles;
+
+  const _DustPainter({required this.progress, required this.particles});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (progress <= 0) return;
+    final center = Offset(size.width / 2, size.height / 2);
+    final eased = Curves.easeOut.transform(progress);
+    final fade = (1 - progress).clamp(0.0, 1.0);
+
+    for (final p in particles) {
+      // Обломки взлетают вверх, затем чуть проседают — движение по дуге
+      final travel = eased * p.distance;
+      final dx = center.dx + math.cos(p.angle) * travel;
+      final riseArc = math.sin(eased * math.pi) * p.riseHeight;
+      final dy = center.dy + math.sin(p.angle) * travel * 0.4 - riseArc;
+
+      final paint = Paint()
+        ..color = (p.isDark ? const Color(0xFF3D2A1A) : const Color(0xFF8A6A4A))
+            .withOpacity(fade * 0.85);
+      canvas.drawCircle(Offset(dx, dy), p.size * (1 - progress * 0.3), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DustPainter oldDelegate) =>
+      oldDelegate.progress != progress;
+}
+
+// ── Трещины на клетке перед провалом ────────────────────────────────────────
+class _CrackPainter extends CustomPainter {
+  final double progress; // 0..1
+
+  const _CrackPainter({required this.progress});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (progress <= 0) return;
+    final center = Offset(size.width / 2, size.height / 2);
+    final paint = Paint()
+      ..color = Colors.black.withOpacity(0.8 * progress)
+      ..strokeWidth = 1.6
+      ..strokeCap = StrokeCap.round;
+
+    // 4 трещины-луча под разными углами, с небольшим изломом посередине
+    const angles = [0.4, 1.9, 3.3, 5.0];
+    for (final a in angles) {
+      final reach = (size.width * 0.42) * progress;
+      final mid = Offset(
+        center.dx + math.cos(a) * reach * 0.5 + math.cos(a + 1.4) * 3,
+        center.dy + math.sin(a) * reach * 0.5 + math.sin(a + 1.4) * 3,
+      );
+      final end = Offset(
+        center.dx + math.cos(a) * reach,
+        center.dy + math.sin(a) * reach,
+      );
+      final path = Path()
+        ..moveTo(center.dx, center.dy)
+        ..lineTo(mid.dx, mid.dy)
+        ..lineTo(end.dx, end.dy);
+      canvas.drawPath(path, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_CrackPainter oldDelegate) =>
+      oldDelegate.progress != progress;
 }
 
 // ── Штриховка заблокированных клеток ────────────────────────────────────────

@@ -10,6 +10,8 @@ import '../widgets/score_widget.dart';
 import '../widgets/ad_banner_widget.dart';
 import '../widgets/chaos_background.dart';
 import '../widgets/classic_background.dart';
+import '../utils/rewarded_ad_service.dart';
+import '../utils/achievements.dart';
 import 'settings_screen.dart';
 
 class GameScreen extends StatelessWidget {
@@ -111,6 +113,26 @@ class _GameScreenContentState extends State<_GameScreenContent> {
                   ),
                 IconButton(
                   icon: Icon(
+                    Icons.lightbulb_outline_rounded,
+                    color: gameState.canHint
+                        ? const Color(0xFFFFD700)
+                        : Colors.white24,
+                  ),
+                  onPressed: gameState.canHint ? gameState.showHint : null,
+                  tooltip: loc.hintTooltip,
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.undo_rounded,
+                    color: gameState.canUndo ? Colors.white : Colors.white24,
+                  ),
+                  onPressed: gameState.canUndo
+                      ? () => _handleUndo(context, gameState)
+                      : null,
+                  tooltip: loc.undoTooltip,
+                ),
+                IconButton(
+                  icon: Icon(
                     gameState.showValidMoves
                         ? Icons.visibility
                         : Icons.visibility_off,
@@ -176,7 +198,9 @@ class _GameScreenContentState extends State<_GameScreenContent> {
                                             gameState.currentPlayer == Player.white &&
                                             gameState.gameMode == GameMode.vsAI,
                                         explosionCell: gameState.explosionCell,
+                                        bonusCell: gameState.bonusCell,
                                         lastMoveCell: gameState.lastMoveCell,
+                                        hintCell: gameState.hintCell,
                                         gameId: gameState.gameId,
                                         isModifierMode: gameState.isModifierMode,
                                       ),
@@ -520,6 +544,50 @@ class _GameScreenContentState extends State<_GameScreenContent> {
     gs.makeMove(row, col);
   }
 
+  // ── Undo (за рекламу) ──────────────────────────────────────────────────
+  Future<void> _handleUndo(BuildContext context, GameState gs) async {
+    if (!gs.canUndo) return;
+    final loc = gs.loc;
+
+    final wantsToWatch = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: GameConstants.backgroundColor,
+        title: Text(loc.undoDialogTitle,
+            style: const TextStyle(color: Colors.white)),
+        content: Text(loc.undoDialogDesc,
+            style: const TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(loc.cancel, style: const TextStyle(color: Colors.white)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00E5FF)),
+            child: Text(loc.watchAd,
+                style: const TextStyle(color: Colors.black)),
+          ),
+        ],
+      ),
+    );
+
+    if (wantsToWatch != true || !context.mounted) return;
+
+    final earned = await RewardedAdService().show();
+
+    if (!context.mounted) return;
+
+    if (earned) {
+      gs.undo();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(loc.adNotReady)),
+      );
+    }
+  }
+
   void _showSettings(BuildContext context, GameState gameState) {
     final loc = gameState.loc;
     Navigator.push(context, MaterialPageRoute(
@@ -536,6 +604,8 @@ class _GameScreenContentState extends State<_GameScreenContent> {
           gameState.setBoardTheme(theme);
           Navigator.pop(context);
         },
+        currentDifficulty: gameState.aiDifficulty,
+        onDifficultyChanged: gameState.setAIDifficulty,
         loc: loc,
       ),
     ));
@@ -827,6 +897,10 @@ class _GameOverDialogState extends State<_GameOverDialog>
                         isWinner: gs.winner == Player.white),
                   ],
                 ),
+                if (gs.newlyUnlockedAchievements.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  _buildNewAchievements(gs.newlyUnlockedAchievements, loc),
+                ],
                 const SizedBox(height: 24),
                 // Кнопки
                 Column(
@@ -863,6 +937,53 @@ class _GameOverDialogState extends State<_GameOverDialog>
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  // ── Новые достижения ──────────────────────────────────────────────────────
+  Widget _buildNewAchievements(
+      List<Achievement> unlocked, AppLocalizations loc) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFCC00).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFFFCC00).withOpacity(0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            loc.newAchievementBanner,
+            style: const TextStyle(
+              color: Color(0xFFFFCC00),
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ...unlocked.map((a) => Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  children: [
+                    Text(a.emoji, style: const TextStyle(fontSize: 18)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        a.title(loc),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )),
         ],
       ),
     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../utils/constants.dart';
 import '../utils/board_theme.dart';
 import '../utils/app_localizations.dart';
+import '../utils/ai_player.dart';
 
 class SettingsScreen extends StatefulWidget {
   final BoardTheme currentTheme;
@@ -10,6 +11,8 @@ class SettingsScreen extends StatefulWidget {
   final VoidCallback? onToggleSound;
   final AppLanguage? currentLanguage;
   final Function(AppLanguage)? onLanguageChanged;
+  final AIDifficulty? currentDifficulty;
+  final Function(AIDifficulty)? onDifficultyChanged;
   final AppLocalizations? loc;
 
   const SettingsScreen({
@@ -20,6 +23,8 @@ class SettingsScreen extends StatefulWidget {
     this.onToggleSound,
     this.currentLanguage,
     this.onLanguageChanged,
+    this.currentDifficulty,
+    this.onDifficultyChanged,
     this.loc,
   }) : super(key: key);
 
@@ -31,6 +36,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late AppLanguage _currentLang;
   late AppLocalizations _loc;
   late bool _soundEnabled;
+  late AIDifficulty _difficulty;
 
   @override
   void initState() {
@@ -38,6 +44,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _currentLang = widget.currentLanguage ?? AppLanguage.english;
     _loc = AppLocalizations(_currentLang);
     _soundEnabled = widget.soundEnabled ?? true;
+    _difficulty = widget.currentDifficulty ?? AIDifficulty.medium;
   }
 
   void _toggleSound() {
@@ -51,6 +58,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _loc = AppLocalizations(lang);
     });
     widget.onLanguageChanged?.call(lang);
+  }
+
+  void _selectDifficulty(AIDifficulty d) {
+    setState(() => _difficulty = d);
+    widget.onDifficultyChanged?.call(d);
+  }
+
+  String _difficultyLabel(AppLocalizations l, AIDifficulty d) {
+    switch (d) {
+      case AIDifficulty.easy: return l.difficultyEasy;
+      case AIDifficulty.medium: return l.difficultyMedium;
+      case AIDifficulty.hard: return l.difficultyHard;
+    }
+  }
+
+  IconData _difficultyIcon(AIDifficulty d) {
+    switch (d) {
+      case AIDifficulty.easy: return Icons.sentiment_satisfied_alt_rounded;
+      case AIDifficulty.medium: return Icons.balance_rounded;
+      case AIDifficulty.hard: return Icons.local_fire_department_rounded;
+    }
+  }
+
+  Color _difficultyColor(AIDifficulty d) {
+    switch (d) {
+      case AIDifficulty.easy: return const Color(0xFF27AE60);
+      case AIDifficulty.medium: return const Color(0xFFF1C40F);
+      case AIDifficulty.hard: return const Color(0xFFE74C3C);
+    }
   }
 
   @override
@@ -147,6 +183,68 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               Expanded(
                                 child: Text(
                                   AppLocalizations.languageNames[lang]!,
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.white70,
+                                    fontSize: 15,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  ),
+                                ),
+                              ),
+                              AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 200),
+                                child: isSelected
+                                    ? const Icon(Icons.check_circle_rounded,
+                                    key: ValueKey('check'),
+                                    color: Color(0xFF27AE60),
+                                    size: 20)
+                                    : const SizedBox(
+                                    key: ValueKey('empty'),
+                                    width: 20),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+
+              // ── Сложность ИИ ──────────────────────────────────────────────
+              if (widget.currentDifficulty != null &&
+                  widget.onDifficultyChanged != null) ...[
+                _sectionTitle(l.aiDifficultySection),
+                const SizedBox(height: 10),
+                _card(
+                  child: Column(
+                    children: AIDifficulty.values.map((d) {
+                      final isSelected = _difficulty == d;
+                      return InkWell(
+                        onTap: () => _selectDifficulty(d),
+                        borderRadius: BorderRadius.circular(8),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? Colors.white.withOpacity(0.07)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(_difficultyIcon(d),
+                                  color: _difficultyColor(d), size: 20),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Text(
+                                  _difficultyLabel(l, d),
                                   style: TextStyle(
                                     color: isSelected
                                         ? Colors.white

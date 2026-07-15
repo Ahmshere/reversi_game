@@ -1,6 +1,35 @@
 import 'cell.dart';
 import '../utils/constants.dart';
 
+/// Снимок состояния доски — используется для истории ходов (Undo).
+/// Хранит только "сырые" данные (без ссылок на Cell), чтобы не зависеть
+/// от мутируемых объектов доски.
+class BoardSnapshot {
+  final List<List<Player>> _players;
+  final List<List<CellType>> _cellTypes;
+  final Player currentPlayer;
+
+  BoardSnapshot._(this._players, this._cellTypes, this.currentPlayer);
+
+  factory BoardSnapshot.capture(Board board) {
+    final players = List.generate(
+      GameConstants.boardSize,
+          (r) => List.generate(
+        GameConstants.boardSize,
+            (c) => board.cells[r][c].player,
+      ),
+    );
+    final types = List.generate(
+      GameConstants.boardSize,
+          (r) => List.generate(
+        GameConstants.boardSize,
+            (c) => board.cells[r][c].cellType,
+      ),
+    );
+    return BoardSnapshot._(players, types, board.currentPlayer);
+  }
+}
+
 /// Результат хода — содержит перевёрнутые клетки и сработавший модификатор
 class MoveResult {
   final List<Cell> flippedCells;
@@ -251,6 +280,20 @@ class Board {
   void reset() {
     _initializeBoard();
     currentPlayer = Player.black;
+  }
+
+  /// Восстанавливает доску из снимка (используется для Undo).
+  /// Мутирует существующие Cell-объекты на месте, чтобы CellWidget
+  /// корректно проиграл анимацию изменения.
+  void restoreSnapshot(BoardSnapshot snapshot) {
+    for (int r = 0; r < GameConstants.boardSize; r++) {
+      for (int c = 0; c < GameConstants.boardSize; c++) {
+        cells[r][c].player = snapshot._players[r][c];
+        cells[r][c].cellType = snapshot._cellTypes[r][c];
+        cells[r][c].isTrapdoorFalling = false;
+      }
+    }
+    currentPlayer = snapshot.currentPlayer;
   }
 
   static const List<List<int>> _directions = [

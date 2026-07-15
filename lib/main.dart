@@ -3,15 +3,23 @@ import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'screens/home_screen.dart';
 import 'screens/game_stats.dart';
+import 'utils/settings_service.dart';
+import 'utils/audio_service.dart';
+import 'utils/rewarded_ad_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Загружаем сохранённую статистику
+  // Загружаем сохранённую статистику и настройки (тема/язык/сложность/звук)
   await StatsRepository().load();
+  await SettingsService().load();
+  await AudioService().load();
 
   // Инициализация Google Mobile Ads
   await MobileAds.instance.initialize();
+
+  // Заранее подгружаем rewarded-рекламу для платного Undo
+  RewardedAdService().preload();
 
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,

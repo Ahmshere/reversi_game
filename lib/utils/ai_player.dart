@@ -28,6 +28,14 @@ class AIPlayer {
     }
   }
 
+  /// Быстрая подсказка «лучшего» хода — без искусственной задержки и
+  /// независимо от выбранной сложности ИИ. Используется кнопкой "Hint".
+  Cell? suggestBestMove(Board board) {
+    final validMoves = board.getValidMoves();
+    if (validMoves.isEmpty) return null;
+    return _getStrategicMove(board, validMoves);
+  }
+
   Cell _getRandomMove(List<Cell> validMoves) =>
       validMoves[_random.nextInt(validMoves.length)];
 

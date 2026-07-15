@@ -131,7 +131,9 @@ class BoardWidget extends StatefulWidget {
   final Cell? lastAIMove;
   final bool isAIThinking;
   final Cell? explosionCell;
+  final Cell? bonusCell; // ← клетка сработавшего бонуса (доп. ход)
   final Cell? lastMoveCell;
+  final Cell? hintCell; // ← клетка с подсказкой лучшего хода
   final int gameId;
   final bool isModifierMode; // ← передаём в CellWidget
 
@@ -145,7 +147,9 @@ class BoardWidget extends StatefulWidget {
     this.lastAIMove,
     this.isAIThinking = false,
     this.explosionCell,
+    this.bonusCell,
     this.lastMoveCell,
+    this.hintCell,
     this.gameId = 0,
     this.isModifierMode = false,
   }) : super(key: key);
@@ -307,6 +311,17 @@ class _BoardWidgetState extends State<BoardWidget>
                       final isAITarget = widget.lastAIMove != null &&
                           widget.lastAIMove!.row == row &&
                           widget.lastAIMove!.col == col;
+                      final isSuggested = widget.hintCell != null &&
+                          widget.hintCell!.row == row &&
+                          widget.hintCell!.col == col;
+                      final isExplosionNeighbor = widget.explosionCell != null &&
+                          !(row == widget.explosionCell!.row &&
+                              col == widget.explosionCell!.col) &&
+                          (row - widget.explosionCell!.row).abs() <= 1 &&
+                          (col - widget.explosionCell!.col).abs() <= 1;
+                      final isBonusTriggered = widget.bonusCell != null &&
+                          widget.bonusCell!.row == row &&
+                          widget.bonusCell!.col == col;
 
                       return CellWidget(
                         key: ValueKey('cell_${widget.gameId}_${row}_$col'),
@@ -320,6 +335,9 @@ class _BoardWidgetState extends State<BoardWidget>
                         isAITarget: isAITarget,
                         isAIThinking: widget.isAIThinking && isAITarget,
                         isModifierMode: widget.isModifierMode,
+                        isSuggested: isSuggested,
+                        isExplosionNeighbor: isExplosionNeighbor,
+                        isBonusTriggered: isBonusTriggered,
                       );
                     },
                   ),

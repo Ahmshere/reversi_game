@@ -145,6 +145,68 @@ class AppLocalizations {
     zh: '新游戏',
   );
 
+  String get hintTooltip => _s(
+    en: 'Hint',
+    ru: 'Подсказка',
+    he: 'רמז',
+    es: 'Pista',
+    fr: 'Indice',
+    de: 'Hinweis',
+    zh: '提示',
+  );
+
+  String get undoTooltip => _s(
+    en: 'Undo move',
+    ru: 'Отменить ход',
+    he: 'בטל מהלך',
+    es: 'Deshacer jugada',
+    fr: 'Annuler le coup',
+    de: 'Zug rückgängig',
+    zh: '悔棋',
+  );
+
+  // ── Диалог отмены хода (Undo за рекламу) ────────────────────────────────────
+
+  String get undoDialogTitle => _s(
+    en: 'Undo last move?',
+    ru: 'Отменить последний ход?',
+    he: 'לבטל את המהלך האחרון?',
+    es: '¿Deshacer la última jugada?',
+    fr: 'Annuler le dernier coup ?',
+    de: 'Letzten Zug rückgängig machen?',
+    zh: '要悔棋吗？',
+  );
+
+  String get undoDialogDesc => _s(
+    en: 'Watch a short ad to take back your last move.',
+    ru: 'Посмотрите короткую рекламу, чтобы отменить последний ход.',
+    he: 'צפו בפרסומת קצרה כדי לבטל את המהלך האחרון שלכם.',
+    es: 'Mira un anuncio corto para deshacer tu última jugada.',
+    fr: 'Regardez une courte publicité pour annuler votre dernier coup.',
+    de: 'Sieh dir eine kurze Werbung an, um deinen letzten Zug rückgängig zu machen.',
+    zh: '观看一段短视频广告即可悔棋。',
+  );
+
+  String get watchAd => _s(
+    en: 'WATCH AD',
+    ru: 'СМОТРЕТЬ РЕКЛАМУ',
+    he: 'צפייה בפרסומת',
+    es: 'VER ANUNCIO',
+    fr: 'VOIR LA PUB',
+    de: 'WERBUNG ANSEHEN',
+    zh: '观看广告',
+  );
+
+  String get adNotReady => _s(
+    en: 'Ad not ready yet. Please try again in a moment.',
+    ru: 'Реклама ещё не загрузилась. Попробуйте чуть позже.',
+    he: 'הפרסומת עדיין לא מוכנה. נסו שוב בעוד רגע.',
+    es: 'El anuncio aún no está listo. Inténtalo de nuevo en un momento.',
+    fr: 'La publicité n\'est pas encore prête. Réessayez dans un instant.',
+    de: 'Werbung ist noch nicht bereit. Bitte versuche es gleich noch einmal.',
+    zh: '广告尚未准备好，请稍后重试。',
+  );
+
   // ── Диалог новой игры ──────────────────────────────────────────────────────
 
   String get newGameTitle => _s(
@@ -341,6 +403,46 @@ class AppLocalizations {
     fr: 'Langue',
     de: 'Sprache',
     zh: '语言',
+  );
+
+  String get aiDifficultySection => _s(
+    en: 'AI Difficulty',
+    ru: 'Сложность ИИ',
+    he: 'רמת קושי המחשב',
+    es: 'Dificultad de la IA',
+    fr: 'Difficulté de l\'IA',
+    de: 'KI-Schwierigkeit',
+    zh: 'AI 难度',
+  );
+
+  String get difficultyEasy => _s(
+    en: 'Easy',
+    ru: 'Лёгкий',
+    he: 'קל',
+    es: 'Fácil',
+    fr: 'Facile',
+    de: 'Leicht',
+    zh: '简单',
+  );
+
+  String get difficultyMedium => _s(
+    en: 'Medium',
+    ru: 'Средний',
+    he: 'בינוני',
+    es: 'Medio',
+    fr: 'Moyen',
+    de: 'Mittel',
+    zh: '中等',
+  );
+
+  String get difficultyHard => _s(
+    en: 'Hard',
+    ru: 'Сложный',
+    he: 'קשה',
+    es: 'Difícil',
+    fr: 'Difficile',
+    de: 'Schwer',
+    zh: '困难',
   );
 
   // ── Правила ───────────────────────────────────────────────────────────────
@@ -627,6 +729,220 @@ class AppLocalizations {
     en: 'All game history will be deleted.', ru: 'Вся история игр будет удалена.',
     he: 'כל היסטוריית המשחקים תימחק.', es: 'Se eliminará todo el historial.',
     fr: 'Tout l\'historique sera supprimé.', de: 'Gesamter Verlauf wird gelöscht.', zh: '所有游戏记录将被删除。',
+  );
+
+  // ── Достижения ────────────────────────────────────────────────────────────
+
+  String get achievementsTitle => _s(
+    en: 'Achievements', ru: 'Достижения', he: 'הישגים',
+    es: 'Logros', fr: 'Succès', de: 'Erfolge', zh: '成就',
+  );
+
+  String achievementsProgress(int unlocked, int total) => _s(
+    en: '$unlocked / $total unlocked',
+    ru: '$unlocked / $total открыто',
+    he: '$unlocked מתוך $total נפתחו',
+    es: '$unlocked / $total desbloqueados',
+    fr: '$unlocked / $total débloqués',
+    de: '$unlocked / $total freigeschaltet',
+    zh: '已解锁 $unlocked / $total',
+  );
+
+  String get achievementLocked => _s(
+    en: 'Locked', ru: 'Заблокировано', he: 'נעול',
+    es: 'Bloqueado', fr: 'Verrouillé', de: 'Gesperrt', zh: '未解锁',
+  );
+
+  String get newAchievementBanner => _s(
+    en: '🏆 New Achievement!',
+    ru: '🏆 Новое достижение!',
+    he: '🏆 הישג חדש!',
+    es: '🏆 ¡Nuevo logro!',
+    fr: '🏆 Nouveau succès !',
+    de: '🏆 Neuer Erfolg!',
+    zh: '🏆 解锁新成就！',
+  );
+
+  String get achFirstGameTitle => _s(
+    en: 'First Steps', ru: 'Первые шаги', he: 'צעדים ראשונים',
+    es: 'Primeros Pasos', fr: 'Premiers Pas', de: 'Erste Schritte', zh: '第一步',
+  );
+  String get achFirstGameDesc => _s(
+    en: 'Play your first game',
+    ru: 'Сыграйте первую партию',
+    he: 'שחקו את המשחק הראשון שלכם',
+    es: 'Juega tu primera partida',
+    fr: 'Jouez votre première partie',
+    de: 'Spiele dein erstes Spiel',
+    zh: '完成你的第一局游戏',
+  );
+
+  String get achGames10Title => _s(
+    en: 'Regular', ru: 'Завсегдатай', he: 'קבוע',
+    es: 'Habitual', fr: 'Habitué', de: 'Stammspieler', zh: '常客',
+  );
+  String get achGames10Desc => _s(
+    en: 'Play 10 games',
+    ru: 'Сыграйте 10 партий',
+    he: 'שחקו 10 משחקים',
+    es: 'Juega 10 partidas',
+    fr: 'Jouez 10 parties',
+    de: 'Spiele 10 Spiele',
+    zh: '完成10局游戏',
+  );
+
+  String get achGames50Title => _s(
+    en: 'Veteran', ru: 'Ветеран', he: 'ותיק',
+    es: 'Veterano', fr: 'Vétéran', de: 'Veteran', zh: '资深玩家',
+  );
+  String get achGames50Desc => _s(
+    en: 'Play 50 games',
+    ru: 'Сыграйте 50 партий',
+    he: 'שחקו 50 משחקים',
+    es: 'Juega 50 partidas',
+    fr: 'Jouez 50 parties',
+    de: 'Spiele 50 Spiele',
+    zh: '完成50局游戏',
+  );
+
+  String get achFirstWinTitle => _s(
+    en: 'First Victory', ru: 'Первая победа', he: 'ניצחון ראשון',
+    es: 'Primera Victoria', fr: 'Première Victoire', de: 'Erster Sieg', zh: '首次胜利',
+  );
+  String get achFirstWinDesc => _s(
+    en: 'Win your first game',
+    ru: 'Одержите первую победу',
+    he: 'נצחו במשחק הראשון שלכם',
+    es: 'Gana tu primera partida',
+    fr: 'Gagnez votre première partie',
+    de: 'Gewinne dein erstes Spiel',
+    zh: '赢得你的第一场胜利',
+  );
+
+  String get achStreak3Title => _s(
+    en: 'Win Streak', ru: 'Победная серия', he: 'רצף ניצחונות',
+    es: 'Racha Ganadora', fr: 'Série de Victoires', de: 'Siegesserie', zh: '连胜',
+  );
+  String get achStreak3Desc => _s(
+    en: 'Win 3 games in a row',
+    ru: '3 победы подряд',
+    he: 'נצחו 3 משחקים ברצף',
+    es: 'Gana 3 partidas seguidas',
+    fr: 'Gagnez 3 parties d\'affilée',
+    de: 'Gewinne 3 Spiele in Folge',
+    zh: '连续赢得3局',
+  );
+
+  String get achStreak5Title => _s(
+    en: 'Unstoppable', ru: 'Не остановить', he: 'בלתי ניתן לעצירה',
+    es: 'Imparable', fr: 'Imparable', de: 'Unaufhaltsam', zh: '势不可挡',
+  );
+  String get achStreak5Desc => _s(
+    en: 'Win 5 games in a row',
+    ru: '5 побед подряд',
+    he: 'נצחו 5 משחקים ברצף',
+    es: 'Gana 5 partidas seguidas',
+    fr: 'Gagnez 5 parties d\'affilée',
+    de: 'Gewinne 5 Spiele in Folge',
+    zh: '连续赢得5局',
+  );
+
+  String get achDominationTitle => _s(
+    en: 'Domination', ru: 'Разгром', he: 'שליטה מוחלטת',
+    es: 'Dominación', fr: 'Domination', de: 'Dominanz', zh: '碾压',
+  );
+  String get achDominationDesc => _s(
+    en: 'Win by a margin of 40+ pieces',
+    ru: 'Победите с разницей 40+ фишек',
+    he: 'נצחו בהפרש של 40+ כלים',
+    es: 'Gana con una ventaja de 40+ piezas',
+    fr: 'Gagnez avec un écart de 40+ pièces',
+    de: 'Gewinne mit einem Vorsprung von 40+ Steinen',
+    zh: '以40+枚棋子的优势获胜',
+  );
+
+  String get achSpeedrunTitle => _s(
+    en: 'Blitz', ru: 'Блицкриг', he: 'בזק',
+    es: 'Blitz', fr: 'Blitz', de: 'Blitz', zh: '闪电战',
+  );
+  String get achSpeedrunDesc => _s(
+    en: 'Win a game in 22 moves or fewer',
+    ru: 'Победите за 22 хода или меньше',
+    he: 'נצחו במשחק תוך 22 מהלכים או פחות',
+    es: 'Gana una partida en 22 movimientos o menos',
+    fr: 'Gagnez une partie en 22 coups ou moins',
+    de: 'Gewinne ein Spiel in 22 Zügen oder weniger',
+    zh: '在22步以内获胜',
+  );
+
+  String get achBoomTitle => _s(
+    en: 'Boom!', ru: 'Бум!', he: 'בום!',
+    es: '¡Bum!', fr: 'Boum !', de: 'Bumm!', zh: '轰！',
+  );
+  String get achBoomDesc => _s(
+    en: 'Trigger an explosive cell in Chaos Mode',
+    ru: 'Активируйте взрывную клетку в Chaos Mode',
+    he: 'הפעילו תא נפץ במצב הכאוס',
+    es: 'Activa una celda explosiva en el modo Caos',
+    fr: 'Déclenchez une case explosive en mode Chaos',
+    de: 'Löse ein Explosionsfeld im Chaos-Modus aus',
+    zh: '在混乱模式中触发一个爆炸格',
+  );
+
+  String get achChainReactionTitle => _s(
+    en: 'Chain Reaction', ru: 'Цепная реакция', he: 'תגובת שרשרת',
+    es: 'Reacción en Cadena', fr: 'Réaction en Chaîne', de: 'Kettenreaktion', zh: '连锁反应',
+  );
+  String get achChainReactionDesc => _s(
+    en: 'Flip 15+ pieces with explosions in one game',
+    ru: 'Переверните взрывами 15+ фишек за одну партию',
+    he: 'הפכו 15+ כלים בעזרת פיצוצים במשחק אחד',
+    es: 'Voltea 15+ piezas con explosiones en una partida',
+    fr: 'Retournez 15+ pièces avec des explosions en une partie',
+    de: 'Drehe 15+ Steine durch Explosionen in einem Spiel um',
+    zh: '在一局游戏中通过爆炸翻转15枚以上棋子',
+  );
+
+  String get achTrapdoorTitle => _s(
+    en: 'Into the Void', ru: 'В бездну', he: 'אל התהום',
+    es: 'Al Vacío', fr: 'Dans le Vide', de: 'Ins Nichts', zh: '坠入虚空',
+  );
+  String get achTrapdoorDesc => _s(
+    en: 'Trigger a collapsing floor in Chaos Mode',
+    ru: 'Активируйте проваливающийся пол в Chaos Mode',
+    he: 'הפעילו רצפה קורסת במצב הכאוס',
+    es: 'Activa un suelo que cede en el modo Caos',
+    fr: 'Déclenchez un sol qui s\'effondre en mode Chaos',
+    de: 'Löse einen einstürzenden Boden im Chaos-Modus aus',
+    zh: '在混乱模式中触发塌陷地板',
+  );
+
+  String get achChaosMasterTitle => _s(
+    en: 'Chaos Master', ru: 'Повелитель хаоса', he: 'אדון הכאוס',
+    es: 'Maestro del Caos', fr: 'Maître du Chaos', de: 'Chaos-Meister', zh: '混乱大师',
+  );
+  String get achChaosMasterDesc => _s(
+    en: 'Win 10 games in Chaos Mode',
+    ru: 'Выиграйте 10 партий в Chaos Mode',
+    he: 'נצחו 10 משחקים במצב הכאוס',
+    es: 'Gana 10 partidas en el modo Caos',
+    fr: 'Gagnez 10 parties en mode Chaos',
+    de: 'Gewinne 10 Spiele im Chaos-Modus',
+    zh: '在混乱模式中赢得10局游戏',
+  );
+
+  String get achGiantSlayerTitle => _s(
+    en: 'Giant Slayer', ru: 'Победитель гигантов', he: 'הורג הענקים',
+    es: 'Matagigantes', fr: 'Tueur de Géants', de: 'Riesentöter', zh: '屠巨者',
+  );
+  String get achGiantSlayerDesc => _s(
+    en: 'Beat the AI on Hard difficulty',
+    ru: 'Обыграйте ИИ на сложности Hard',
+    he: 'נצחו את המחשב ברמת קושי קשה',
+    es: 'Vence a la IA en dificultad Difícil',
+    fr: 'Battez l\'IA en difficulté Difficile',
+    de: 'Besiege die KI auf Schwer',
+    zh: '在困难难度下击败AI',
   );
 
   // ── Туториал — навигация ──────────────────────────────────────────────────
