@@ -257,7 +257,21 @@ class GameState extends ChangeNotifier {
     _isProcessing = false;
     notifyListeners();
 
-    if (!isGameOver && validMoves.isEmpty) {
+    if (_extraTurn) {
+      // ── Бонусный ход: игрок, который только что сходил, получает ещё
+      // один ход. board.makeMove() уже переключил игрока на соперника —
+      // переключаем обратно, чтобы ходил тот же игрок.
+      _extraTurn = false;
+      _board.skipTurn();
+      notifyListeners();
+
+      // Важно: у игрока с доп. ходом может не оказаться доступных клеток —
+      // тогда, как и при обычном ходе, нужно передать ход дальше, а не
+      // оставлять игру «зависшей» без возможных ходов.
+      if (!isGameOver && validMoves.isEmpty) {
+        await _showSkipBannerAndSkip();
+      }
+    } else if (!isGameOver && validMoves.isEmpty) {
       await _showSkipBannerAndSkip();
     }
 
@@ -274,13 +288,16 @@ class GameState extends ChangeNotifier {
       notifyListeners();
     }
 
-    // ── Бонусный ход: текущий игрок ходит снова ─────────────────────────────
-    if (_extraTurn) {
-      _extraTurn = false;
-      // board уже переключил игрока → переключаем обратно
-      _board.skipTurn();
-      notifyListeners();
-      return; // ход остаётся за тем же игроком, AI не вызываем
+    // На всякий случай проверяем ещё раз перед передачей хода ИИ — провал
+    // люка/спавн модификаторов теоретически тоже могут оставить игрока
+    // без доступных ходов.
+    if (!isGameOver && validMoves.isEmpty) {
+      await _showSkipBannerAndSkip();
+    }
+
+    if (isGameOver) {
+      await _playGameOverSound();
+      return;
     }
 
     // ── Ход ИИ ───────────────────────────────────────────────────────────────

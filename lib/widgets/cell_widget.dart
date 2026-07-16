@@ -430,13 +430,6 @@ class _CellWidgetState extends State<CellWidget>
               width: 1.2,
             ),
           ),
-          child: Center(
-            child: Opacity(
-              opacity: (_pitAnim.value * 2 - 1).clamp(0.0, 1.0),
-              child: const Text('🕳️',
-                  style: TextStyle(fontSize: 18)),
-            ),
-          ),
         ),
       ),
     );
@@ -456,61 +449,15 @@ class _CellWidgetState extends State<CellWidget>
 
       return Transform.translate(
         offset: Offset(jitterX, jitterY),
-        child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Левая половина клетки
-          ClipRect(
-            child: Align(
-              alignment: Alignment.centerLeft,
-              widthFactor: 0.5,
-              child: Transform.translate(
-                offset: Offset(
-                  -_crackAnim.value * 4,
-                  _trapdoorY.value * 0.3,
-                ),
-                child: Transform.rotate(
-                  angle: -_crackAnim.value * 0.15,
-                  child: Opacity(
-                    opacity: _trapdoorFade.value.clamp(0.0, 1.0),
-                    child: _buildPiece(widget.cell.player),
-                  ),
-                ),
-              ),
+        child: Transform.translate(
+          offset: Offset(0, _trapdoorY.value),
+          child: Transform.scale(
+            scale: _trapdoorScale.value,
+            child: Opacity(
+              opacity: _trapdoorFade.value.clamp(0.0, 1.0),
+              child: _buildPiece(widget.cell.player),
             ),
           ),
-          // Правая половина
-          ClipRect(
-            child: Align(
-              alignment: Alignment.centerRight,
-              widthFactor: 0.5,
-              child: Transform.translate(
-                offset: Offset(
-                  _crackAnim.value * 4,
-                  _trapdoorY.value * 0.3,
-                ),
-                child: Transform.rotate(
-                  angle: _crackAnim.value * 0.15,
-                  child: Opacity(
-                    opacity: _trapdoorFade.value.clamp(0.0, 1.0),
-                    child: _buildPiece(widget.cell.player),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          // Основная фишка падает вниз
-          Transform.translate(
-            offset: Offset(0, _trapdoorY.value),
-            child: Transform.scale(
-              scale: _trapdoorScale.value,
-              child: Opacity(
-                opacity: _trapdoorFade.value.clamp(0.0, 1.0),
-                child: _buildPiece(widget.cell.player),
-              ),
-            ),
-          ),
-        ],
         ),
       );
     }

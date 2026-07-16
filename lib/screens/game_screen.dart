@@ -712,6 +712,8 @@ class _GameScreenContentState extends State<_GameScreenContent> {
 // Диалог конца игры с эффектом конфетти
 // ══════════════════════════════════════════════════════════════════════════════
 
+// x/y хранятся как доли (0..1) от размера холста, чтобы конфетти корректно
+// масштабировалось на любой размер экрана (в т.ч. на широких планшетах).
 class _Confetto {
   double x, y, speed, angle, rotation, rotSpeed, size;
   Color color;
@@ -730,7 +732,7 @@ class _ConfettiPainter extends CustomPainter {
     for (final c in confetti) {
       paint.color = c.color;
       canvas.save();
-      canvas.translate(c.x, c.y);
+      canvas.translate(c.x * size.width, c.y * size.height);
       canvas.rotate(c.rotation);
       canvas.drawRect(
         Rect.fromCenter(center: Offset.zero, width: c.size, height: c.size * 0.5),
@@ -783,9 +785,9 @@ class _GameOverDialogState extends State<_GameOverDialog>
     _ctrl = AnimationController(vsync: this, duration: const Duration(seconds: 4))
       ..repeat();
     _confetti = List.generate(80, (_) => _Confetto(
-      x: _rng.nextDouble() * 400,
-      y: -_rng.nextDouble() * 400,
-      speed: 1.5 + _rng.nextDouble() * 3,
+      x: _rng.nextDouble(),
+      y: -_rng.nextDouble(),
+      speed: 0.003 + _rng.nextDouble() * 0.006,
       angle: (_rng.nextDouble() - 0.5) * 0.5,
       rotation: _rng.nextDouble() * math.pi * 2,
       rotSpeed: (_rng.nextDouble() - 0.5) * 0.2,
@@ -800,11 +802,11 @@ class _GameOverDialogState extends State<_GameOverDialog>
     setState(() {
       for (final c in _confetti) {
         c.y += c.speed;
-        c.x += math.sin(c.angle) * 1.5;
+        c.x += math.sin(c.angle) * 0.002;
         c.rotation += c.rotSpeed;
-        if (c.y > 600) {
-          c.y = -20;
-          c.x = _rng.nextDouble() * 400;
+        if (c.y > 1.05) {
+          c.y = -0.05;
+          c.x = _rng.nextDouble();
         }
       }
     });
@@ -821,13 +823,19 @@ class _GameOverDialogState extends State<_GameOverDialog>
   Widget build(BuildContext context) {
     final gs = widget.gs;
     final loc = widget.loc;
+    final screenSize = MediaQuery.of(context).size;
 
     return Dialog(
       backgroundColor: Colors.transparent,
-      child: Stack(
+      insetPadding: EdgeInsets.zero,
+      child: SizedBox(
+        width: screenSize.width,
+        height: screenSize.height,
+        child: Stack(
+        alignment: Alignment.center,
         clipBehavior: Clip.none,
         children: [
-          // Конфетти (только при победе)
+          // Конфетти на весь экран (только при победе)
           if (widget.isWin)
             Positioned.fill(
               child: IgnorePointer(
@@ -938,6 +946,7 @@ class _GameOverDialogState extends State<_GameOverDialog>
             ),
           ),
         ],
+        ),
       ),
     );
   }

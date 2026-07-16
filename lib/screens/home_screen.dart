@@ -271,6 +271,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late Animation<double> _card2Anim;
   late Animation<double> _bottomAnim;
 
+  // ── Заголовок: непрерывный переливающийся градиент + разовый блик ────────
+  late AnimationController _titleShimmerCtrl;
+  late AnimationController _titleShineCtrl;
+
   late List<_FloatingPiece> _pieces;
 
   AppLocalizations get _loc => AppLocalizations(_language);
@@ -317,6 +321,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
 
     _pieces = _generatePieces();
+
+    // Непрерывный переливающийся градиент заголовка
+    _titleShimmerCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat();
+
+    // Разовый блик по контуру заголовка при загрузке экрана
+    _titleShineCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    );
+    Future.delayed(const Duration(milliseconds: 700), () {
+      if (mounted) _titleShineCtrl.forward();
+    });
   }
 
   List<_FloatingPiece> _generatePieces() {
@@ -357,6 +376,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void dispose() {
     _ticker.dispose();
     _entranceController.dispose();
+    _titleShimmerCtrl.dispose();
+    _titleShineCtrl.dispose();
     super.dispose();
   }
 
@@ -656,25 +677,70 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── Заголовок с градиентом ────────────────────────────────────────────────
+  // ── Заголовок: переливающийся градиент + разовый блик при загрузке ───────
   Widget _buildTitle(AppLocalizations loc) {
+    const titleStyle = TextStyle(
+      color: Colors.white,
+      fontSize: 60,
+      fontWeight: FontWeight.w900,
+      letterSpacing: 8,
+      height: 1.0,
+    );
+
     return Column(
       children: [
-        ShaderMask(
-          shaderCallback: (bounds) => const LinearGradient(
-            colors: [Color(0xFF56E39F), Color(0xFF27AE60), Color(0xFF5DADE2)],
-            stops: [0.0, 0.5, 1.0],
-          ).createShader(bounds),
-          child: Text(
-            loc.appTitle,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 52,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 8,
-              height: 1.0,
-            ),
-          ),
+        AnimatedBuilder(
+          animation: Listenable.merge([_titleShimmerCtrl, _titleShineCtrl]),
+          builder: (context, _) {
+            // Непрерывное «переливание»: градиент плавно скользит туда-обратно
+            final shimmerSlide = math.sin(_titleShimmerCtrl.value * math.pi * 2);
+            // Разовый блик по контуру при загрузке экрана (проходит один раз)
+            final shineT = _titleShineCtrl.value;
+            final shineCenter = -0.5 + 2.0 * shineT;
+
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                ShaderMask(
+                  shaderCallback: (bounds) => LinearGradient(
+                    colors: const [
+                      Color(0xFF56E39F),
+                      Color(0xFF5DADE2),
+                      Color(0xFFF7D794),
+                      Color(0xFF27AE60),
+                      Color(0xFF56E39F),
+                    ],
+                    stops: const [0.0, 0.28, 0.5, 0.72, 1.0],
+                    begin: Alignment(-1.0 - shimmerSlide, 0),
+                    end: Alignment(1.0 - shimmerSlide, 0),
+                    tileMode: TileMode.mirror,
+                  ).createShader(bounds),
+                  child: Text(loc.appTitle, style: titleStyle),
+                ),
+                IgnorePointer(
+                  child: ShaderMask(
+                    blendMode: BlendMode.srcIn,
+                    shaderCallback: (bounds) {
+                      final stops = <double>[
+                        (shineCenter - 0.16).clamp(0.0, 1.0).toDouble(),
+                        shineCenter.clamp(0.0, 1.0).toDouble(),
+                        (shineCenter + 0.16).clamp(0.0, 1.0).toDouble(),
+                      ];
+                      return LinearGradient(
+                        colors: const [
+                          Colors.transparent,
+                          Colors.white,
+                          Colors.transparent,
+                        ],
+                        stops: stops,
+                      ).createShader(bounds);
+                    },
+                    child: Text(loc.appTitle, style: titleStyle),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
         const SizedBox(height: 10),
         Container(
