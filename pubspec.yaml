@@ -1,6 +1,6 @@
 name: reversi_game
 description: "Reversi"
-version: 1.4.0+16
+version: 1.5.0+17
 
 environment:
   sdk: ^3.10.3
@@ -13,6 +13,7 @@ dependencies:
   audioplayers: ^6.1.0
   google_mobile_ads: ^5.3.0
   shared_preferences: ^2.3.0
+  google_fonts: ^6.2.1
 
 dev_dependencies:
   flutter_test:
@@ -39,4 +40,5 @@ flutter_launcher_icons:
   ios: true
   image_path: "assets/pics/icon.png"
   min_sdk_android: 21
-  adaptive_icon_background: "#9DDBB8"  # цвет фона для Android adaptive icon
+  adaptive_icon_background: "#AEDCAA"  # цвет фона adaptive-иконки (подобран под доску в иконке)
+  adaptive_icon_foreground: "assets/pics/icon_foreground.png"

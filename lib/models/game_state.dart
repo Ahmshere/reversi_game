@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'board.dart';
@@ -48,6 +49,12 @@ class GameState extends ChangeNotifier {
   int _totalMoveCount = 0;
   bool _extraTurn = false;
   Cell? _lastTrapdoorCell;
+
+  // ── Удар молнии (раз в 5 минут, сжигает случайную фишку) ─────────────────
+  Timer? _lightningTimer;
+  static const Duration _lightningInterval = Duration(minutes: 5);
+  Cell? _lightningCell;
+  Cell? get lightningCell => _lightningCell;
 
   // ── Статистика текущей партии ─────────────────────────────────────────────
   int _blackFlipped = 0;   // сколько фишек перевернул чёрный
@@ -132,7 +139,49 @@ class GameState extends ChangeNotifier {
 
   // ── Сеттеры ───────────────────────────────────────────────────────────────
   void setGameMode(GameMode mode) { _gameMode = mode; notifyListeners(); }
-  void setModifierMode(bool value) { _isModifierMode = value; notifyListeners(); }
+  void setModifierMode(bool value) {
+    _isModifierMode = value;
+    notifyListeners();
+    if (value) {
+      _startLightningTimer();
+    } else {
+      _lightningTimer?.cancel();
+      _lightningTimer = null;
+    }
+  }
+
+  void _startLightningTimer() {
+    _lightningTimer?.cancel();
+    _lightningTimer = Timer.periodic(_lightningInterval, (_) => _triggerLightningStrike());
+  }
+
+  /// Раз в 5 минут в режиме Хаос молния случайно сжигает одну фишку на поле.
+  Future<void> _triggerLightningStrike() async {
+    if (!_isModifierMode || isGameOver || _isProcessing) return;
+
+    final occupied = _board.getOccupiedNonCornerCells();
+    if (occupied.isEmpty) return;
+
+    final rng = math.Random();
+    final target = occupied[rng.nextInt(occupied.length)];
+
+    _lightningCell = target;
+    _showModifierBanner(loc.modifierLightning);
+    _audio.playExplosion();
+    notifyListeners();
+
+    // Молния бьёт почти мгновенно — фишка сгорает вскоре после вспышки
+    await Future.delayed(const Duration(milliseconds: 260));
+    target.player = Player.none;
+    _triggerShake();
+    notifyListeners();
+
+    await Future.delayed(const Duration(milliseconds: 950));
+    _lightningCell = null;
+    _modifierBannerText = null;
+    notifyListeners();
+  }
+
   void setAIDifficulty(AIDifficulty d) {
     _aiPlayer = AIPlayer(difficulty: d);
     SettingsService().setAIDifficulty(d);
@@ -593,5 +642,11 @@ class GameState extends ChangeNotifier {
     if (w == Player.black) return l.blackWins;
     if (w == Player.white) return l.whiteWins;
     return l.draw;
+  }
+
+  @override
+  void dispose() {
+    _lightningTimer?.cancel();
+    super.dispose();
   }
 }

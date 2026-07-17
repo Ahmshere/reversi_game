@@ -199,6 +199,7 @@ class _GameScreenContentState extends State<_GameScreenContent> {
                                             gameState.gameMode == GameMode.vsAI,
                                         explosionCell: gameState.explosionCell,
                                         bonusCell: gameState.bonusCell,
+                                        lightningCell: gameState.lightningCell,
                                         lastMoveCell: gameState.lastMoveCell,
                                         hintCell: gameState.hintCell,
                                         gameId: gameState.gameId,

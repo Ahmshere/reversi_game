@@ -121,6 +121,127 @@ class _ExplosionPainter extends CustomPainter {
   bool shouldRepaint(_ExplosionPainter o) => o.progress != progress;
 }
 
+// ── Painter удара молнии ──────────────────────────────────────────────────────
+class _LightningPainter extends CustomPainter {
+  final double progress; // 0..1
+  final Offset target;
+  final List<Offset> bolt;
+  final List<List<Offset>> branches;
+
+  const _LightningPainter({
+    required this.progress,
+    required this.target,
+    required this.bolt,
+    required this.branches,
+  });
+
+  void _drawPolyline(Canvas canvas, List<Offset> pts, Paint paint) {
+    if (pts.length < 2) return;
+    final path = Path()..moveTo(pts.first.dx, pts.first.dy);
+    for (final p in pts.skip(1)) {
+      path.lineTo(p.dx, p.dy);
+    }
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (progress <= 0 || bolt.length < 2) return;
+
+    // Фаза 1 (0.0-0.25): путь молнии стремительно "прочерчивается" сверху вниз
+    final drawT = (progress / 0.25).clamp(0.0, 1.0);
+    final visibleCount = (bolt.length * drawT).ceil().clamp(1, bolt.length);
+    final visiblePath = bolt.sublist(0, visibleCount);
+
+    double boltAlpha;
+    if (progress < 0.5) {
+      boltAlpha = 1.0;
+    } else {
+      final fadeT = ((progress - 0.5) / 0.5).clamp(0.0, 1.0);
+      boltAlpha = (1 - fadeT) * (0.7 + 0.3 * math.sin(progress * math.pi * 18));
+      boltAlpha = boltAlpha.clamp(0.0, 1.0);
+    }
+
+    // Внешнее фиолетовое свечение
+    _drawPolyline(canvas, visiblePath, Paint()
+      ..color = const Color(0xFF8A5CFF).withOpacity(0.55 * boltAlpha)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 14
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10));
+
+    // Среднее голубое свечение
+    _drawPolyline(canvas, visiblePath, Paint()
+      ..color = const Color(0xFF66E0FF).withOpacity(0.75 * boltAlpha)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 6
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3));
+
+    // Яркое белое ядро
+    _drawPolyline(canvas, visiblePath, Paint()
+      ..color = Colors.white.withOpacity(boltAlpha)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.4
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round);
+
+    // Ответвления — только когда основной путь уже полностью прочерчен
+    if (drawT >= 1.0) {
+      for (final branch in branches) {
+        _drawPolyline(canvas, branch, Paint()
+          ..color = const Color(0xFF8A5CFF).withOpacity(0.4 * boltAlpha)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 8
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6));
+        _drawPolyline(canvas, branch, Paint()
+          ..color = Colors.white.withOpacity(0.85 * boltAlpha)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.6
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round);
+      }
+    }
+
+    // Вспышка удара + искры в точке попадания
+    if (progress > 0.18) {
+      final flashT = ((progress - 0.18) / 0.35).clamp(0.0, 1.0);
+      final flashFade = 1 - ((progress - 0.45) / 0.55).clamp(0.0, 1.0);
+      final r = 14 + 46 * Curves.easeOut.transform(flashT);
+
+      final flashPaint = Paint()
+        ..shader = RadialGradient(
+          colors: [
+            Colors.white.withOpacity(0.95 * flashFade),
+            const Color(0xFF9B5CFF).withOpacity(0.6 * flashFade),
+            Colors.transparent,
+          ],
+          stops: const [0.0, 0.45, 1.0],
+        ).createShader(Rect.fromCircle(center: target, radius: r));
+      canvas.drawCircle(target, r, flashPaint);
+
+      final sparkPaint = Paint()..strokeWidth = 2;
+      for (int i = 0; i < 10; i++) {
+        final a = i * math.pi * 2 / 10;
+        final len = 10 + 26 * flashT;
+        sparkPaint.color = const Color(0xFFBFE9FF).withOpacity(flashFade * 0.8);
+        canvas.drawLine(
+          Offset(target.dx + math.cos(a) * 6, target.dy + math.sin(a) * 6),
+          Offset(target.dx + math.cos(a) * len, target.dy + math.sin(a) * len),
+          sparkPaint,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_LightningPainter oldDelegate) => true;
+}
+
 // ── BoardWidget ──────────────────────────────────────────────────────────────
 class BoardWidget extends StatefulWidget {
   final Board board;
@@ -132,6 +253,7 @@ class BoardWidget extends StatefulWidget {
   final bool isAIThinking;
   final Cell? explosionCell;
   final Cell? bonusCell; // ← клетка сработавшего бонуса (доп. ход)
+  final Cell? lightningCell; // ← клетка, в которую ударила молния
   final Cell? lastMoveCell;
   final Cell? hintCell; // ← клетка с подсказкой лучшего хода
   final int gameId;
@@ -148,6 +270,7 @@ class BoardWidget extends StatefulWidget {
     this.isAIThinking = false,
     this.explosionCell,
     this.bonusCell,
+    this.lightningCell,
     this.lastMoveCell,
     this.hintCell,
     this.gameId = 0,
@@ -166,6 +289,12 @@ class _BoardWidgetState extends State<BoardWidget>
   List<_Particle> _particles = [];
   Cell? _activeExplosionCell;
 
+  // ── Удар молнии ───────────────────────────────────────────────────────────
+  late AnimationController _lightningCtrl;
+  Cell? _activeLightningCell;
+  List<double> _boltSegJitter = [];
+  List<int> _boltBranchSeeds = [];
+
   // ── Анимация появления доски ─────────────────────────────────────────────
   late AnimationController _entranceCtrl;
   late Animation<double> _entranceScale;
@@ -181,6 +310,11 @@ class _BoardWidgetState extends State<BoardWidget>
     _explosionAnim = CurvedAnimation(
       parent: _explosionCtrl,
       curve: Curves.easeOut,
+    );
+
+    _lightningCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1300),
     );
 
     // Появление доски при старте
@@ -214,10 +348,59 @@ class _BoardWidgetState extends State<BoardWidget>
       _explosionCtrl.reset();
       _activeExplosionCell = null;
     }
+    // Ударила молния
+    if (widget.lightningCell != null &&
+        oldWidget.lightningCell != widget.lightningCell) {
+      final rng = math.Random();
+      _activeLightningCell = widget.lightningCell;
+      _boltSegJitter = List.generate(7, (_) => (rng.nextDouble() - 0.5) * 2);
+      _boltBranchSeeds = List.generate(2, (_) => rng.nextInt(1 << 30));
+      _lightningCtrl.forward(from: 0.0);
+    }
+    // Молния погасла
+    if (widget.lightningCell == null && oldWidget.lightningCell != null) {
+      _lightningCtrl.reset();
+      _activeLightningCell = null;
+    }
     // Новая игра — переиграть анимацию появления доски
     if (widget.lastMoveCell == null && oldWidget.lastMoveCell != null) {
       _entranceCtrl.forward(from: 0.0);
     }
+  }
+
+  // ── Путь молнии: от верха доски до клетки-цели ───────────────────────────
+  List<Offset> _boltPathFor(Offset target) {
+    final n = _boltSegJitter.length;
+    final points = <Offset>[Offset(target.dx + _boltSegJitter[0] * 14, 0)];
+    for (int i = 1; i < n; i++) {
+      final t = i / (n - 1);
+      final y = target.dy * t;
+      final maxJitter = 30 * (1 - t * 0.4);
+      final x = target.dx + _boltSegJitter[i] * maxJitter;
+      points.add(Offset(x, y));
+    }
+    points.add(target);
+    return points;
+  }
+
+  List<List<Offset>> _boltBranchesFor(List<Offset> bolt) {
+    if (bolt.length < 4 || _boltBranchSeeds.isEmpty) return [];
+    final branches = <List<Offset>>[];
+    for (final seed in _boltBranchSeeds) {
+      final rng = math.Random(seed);
+      final startIdx = 1 + rng.nextInt(bolt.length - 3);
+      final start = bolt[startIdx];
+      final dir = rng.nextBool() ? 1 : -1;
+      final branch = <Offset>[start];
+      double x = start.dx, y = start.dy;
+      for (int s = 0; s < 3; s++) {
+        x += dir * (14 + rng.nextDouble() * 22);
+        y += 12 + rng.nextDouble() * 18;
+        branch.add(Offset(x, y));
+      }
+      branches.add(branch);
+    }
+    return branches;
   }
 
   List<_Particle> _generateParticles() {
@@ -242,6 +425,7 @@ class _BoardWidgetState extends State<BoardWidget>
   @override
   void dispose() {
     _explosionCtrl.dispose();
+    _lightningCtrl.dispose();
     _entranceCtrl.dispose();
     super.dispose();
   }
@@ -356,6 +540,29 @@ class _BoardWidgetState extends State<BoardWidget>
                             progress: _explosionAnim.value,
                             center: _cellCenter(_activeExplosionCell!, boardSize),
                             particles: _particles,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+
+                // ── Удар молнии — поверх доски ─────────────────────────────────
+                if (_activeLightningCell != null)
+                  AnimatedBuilder(
+                    animation: _lightningCtrl,
+                    builder: (_, __) {
+                      final progress = _lightningCtrl.value;
+                      if (progress <= 0) return const SizedBox.shrink();
+                      final target = _cellCenter(_activeLightningCell!, boardSize);
+                      final bolt = _boltPathFor(target);
+                      return IgnorePointer(
+                        child: CustomPaint(
+                          size: boardSize,
+                          painter: _LightningPainter(
+                            progress: progress,
+                            target: target,
+                            bolt: bolt,
+                            branches: _boltBranchesFor(bolt),
                           ),
                         ),
                       );

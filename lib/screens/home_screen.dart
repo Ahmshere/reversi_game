@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../models/game_state.dart';
 import 'game_stats.dart';
 import 'achievements_screen.dart';
@@ -271,6 +272,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late Animation<double> _card2Anim;
   late Animation<double> _bottomAnim;
 
+  // ── Фишки логотипа «вылетают» по углам с отскоком при запуске ────────────
+  late Animation<double> _pieceBurstAnim;
+
   // ── Заголовок: непрерывный переливающийся градиент + разовый блик ────────
   late AnimationController _titleShimmerCtrl;
   late AnimationController _titleShineCtrl;
@@ -319,13 +323,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       parent: _entranceController,
       curve: const Interval(0.55, 1.0, curve: Curves.easeOutCubic),
     );
+    _pieceBurstAnim = CurvedAnimation(
+      parent: _entranceController,
+      curve: const Interval(0.0, 0.7, curve: Curves.easeOutBack),
+    );
 
     _pieces = _generatePieces();
 
-    // Непрерывный переливающийся градиент заголовка
+    // Непрерывный переливающийся градиент заголовка (чуть медленнее)
     _titleShimmerCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 3),
+      duration: const Duration(milliseconds: 4600),
     )..repeat();
 
     // Разовый блик по контуру заголовка при загрузке экрана
@@ -444,17 +452,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       children: [
                         SizedBox(height: size.height * 0.02),
 
-                        // Логотип с анимированными фишками
-                        FadeTransition(
-                          opacity: _titleAnim,
-                          child: SlideTransition(
-                            position: Tween<Offset>(
-                              begin: const Offset(0, -0.3),
-                              end: Offset.zero,
-                            ).animate(_titleAnim),
-                            child: _buildLogoArea(),
-                          ),
-                        ),
+                        // Логотип: фишки «вылетают» по углам с отскоком
+                        _buildLogoArea(),
 
                         SizedBox(height: size.height * 0.03),
 
@@ -600,22 +599,25 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         alignment: Alignment.center,
         children: [
           // Светящийся ореол
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF27AE60)
-                      .withOpacity(0.12 + 0.06 * math.sin(t * 0.8)),
-                  blurRadius: 50,
-                  spreadRadius: 15,
-                ),
-              ],
+          FadeTransition(
+            opacity: _titleAnim,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF27AE60)
+                        .withOpacity(0.12 + 0.06 * math.sin(t * 0.8)),
+                    blurRadius: 50,
+                    spreadRadius: 15,
+                  ),
+                ],
+              ),
             ),
           ),
-          // Четыре фишки паттерн 2x2
+          // Четыре фишки паттерн 2x2 — вылетают по углам с отскоком
           ..._buildBoardPieces(t),
         ],
       ),
@@ -626,6 +628,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     const gap = 27.0;
     const pieceR = 22.0;
     final pulse = 1.0 + 0.04 * math.sin(t * 1.5);
+    // Значение может слегка «перелетать» за 1.0 (Curves.easeOutBack) — это и
+    // даёт эффект приземления с лёгким отскоком.
+    final burst = _pieceBurstAnim.value;
+    final fade = burst.clamp(0.0, 1.0).toDouble();
+    const flyDistance = 190.0;
 
     final configs = [
       (dx: -gap, dy: -gap, isBlack: false),
@@ -635,11 +642,25 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     ];
 
     return configs.map((c) {
-      return Transform.translate(
-        offset: Offset(c.dx, c.dy),
-        child: Transform.scale(
-          scale: pulse,
-          child: _buildDecoPiece(pieceR, c.isBlack, t, c.dx),
+      // Каждая фишка летит из своего угла экрана (по диагонали от центра)
+      // и с лёгким вращением приходит на финальное место.
+      final signX = c.dx.sign;
+      final signY = c.dy.sign;
+      final flyX = signX * flyDistance * (1 - burst);
+      final flyY = signY * flyDistance * (1 - burst);
+      final spin = (1 - burst) * signX * signY * 0.9;
+
+      return Opacity(
+        opacity: fade,
+        child: Transform.translate(
+          offset: Offset(c.dx + flyX, c.dy + flyY),
+          child: Transform.rotate(
+            angle: spin,
+            child: Transform.scale(
+              scale: pulse,
+              child: _buildDecoPiece(pieceR, c.isBlack, t, c.dx),
+            ),
+          ),
         ),
       );
     }).toList();
@@ -677,13 +698,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── Заголовок: переливающийся градиент + разовый блик при загрузке ───────
+  // ── Заголовок: дерзкий "огненный" шрифт + переливающийся градиент + блик ──
   Widget _buildTitle(AppLocalizations loc) {
-    const titleStyle = TextStyle(
+    final titleStyle = GoogleFonts.titanOne(
       color: Colors.white,
-      fontSize: 60,
-      fontWeight: FontWeight.w900,
-      letterSpacing: 8,
+      fontSize: 54,
+      letterSpacing: 3,
       height: 1.0,
     );
 
@@ -707,10 +727,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       Color(0xFF56E39F),
                       Color(0xFF5DADE2),
                       Color(0xFFF7D794),
-                      Color(0xFF27AE60),
+                      Color(0xFFE63946),
                       Color(0xFF56E39F),
                     ],
-                    stops: const [0.0, 0.28, 0.5, 0.72, 1.0],
+                    stops: const [0.0, 0.26, 0.5, 0.74, 1.0],
                     begin: Alignment(-1.0 - shimmerSlide, 0),
                     end: Alignment(1.0 - shimmerSlide, 0),
                     tileMode: TileMode.mirror,

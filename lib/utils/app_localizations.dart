@@ -585,6 +585,16 @@ class AppLocalizations {
     zh: '🕳️ 地板塌陷了！',
   );
 
+  String get modifierLightning => _s(
+    en: '⚡ Lightning strike! A piece was burned',
+    ru: '⚡ Удар молнии! Фишка сгорела',
+    he: '⚡ מכת ברק! חייל נשרף',
+    es: '⚡ ¡Rayo! Una ficha se quemó',
+    fr: '⚡ Foudre ! Un pion a brûlé',
+    de: '⚡ Blitzeinschlag! Ein Stein ist verbrannt',
+    zh: '⚡ 雷击！一枚棋子被烧毁',
+  );
+
   String get aiThinking => _s(
     en: 'Computer is thinking…',
     ru: 'Компьютер думает…',
